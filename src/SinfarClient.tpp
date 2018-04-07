@@ -1,12 +1,11 @@
 #include "SinfarClient.h"
 #include <boost/algorithm/string.hpp>    
 
-SinfarClient::SinfarClient(std::shared_ptr<Database> database,std::shared_ptr<orderentry::Market> market):m_database(database),m_market(market)
+SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):m_ressourceManager(ressourceManager)
 {
     char path_temp[]="/tmp/SinfarXXXXXXXXXXXXXXXXXXXX";
     std::string m_temp_dir=std::string(mkdtemp(path_temp));
     m_path=m_temp_dir+std::string("/bot_trader");
-    UpdateMarket();
     Login();
 }
 
@@ -97,72 +96,9 @@ std::string SinfarClient::PollMessage()
     return str;
 }
 
-bool SinfarClient::HasAccount(int PCId)
-{
-    bool banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<bool*>(data)=count>0;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT count(*) FROM account where PCId=")+std::to_string(PCId);
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
-bool SinfarClient::IsEmployee(int PCId) 
-{
-    bool banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<bool*>(data)=count>0;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT count(*) FROM account where PCId=")+std::to_string(PCId)+std::string(" and permission_level>4");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
-bool SinfarClient::IsAdmin(int PCId) 
-{
-    bool banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<bool*>(data)=count>0;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT count(*) FROM account where PCId=")+std::to_string(PCId)+std::string(" and permission_level>9");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
 void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string PlayerName,std::string Message)
 {
-    if(HasAccount(PCId))
+    if(m_ressourceManager->HasAccount(PCId))
     {
         {
             std::stringstream stream(Message);
@@ -171,7 +107,22 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
             boost::algorithm::to_lower(command);
             if(command==std::string("lg") || command==std::string("listgoods"))
             {
-                ListGoods(PlayerName);
+                std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                {
+                    SendMessage(PlayerName,message);
+                };
+                try
+                {
+                    m_ressourceManager->ListGoods(func);
+                }
+                catch(const std::exception& ex)
+                {
+                    SendMessage(PlayerName,ex.what());
+                }
+                catch (const std::string& ex)
+                {
+                    SendMessage(PlayerName,ex);
+                }
             }
             else if(command==std::string("inventory") || command==std::string("i"))
             {
@@ -187,11 +138,26 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     boost::algorithm::to_lower(GoodsName);
                     int Quantity;
                     stream>>Quantity;
-                    if(Quantity>0&&PCIdTo>0 && IsEmployee(PCId))
+                    if(Quantity>0&&PCIdTo>0 && m_ressourceManager->IsEmployee(PCId))
                     {
-                        if(HasGoods(GoodsName))
+                        if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            AddInventory(PlayerName,PCIdTo,GoodsName,Quantity);
+                            std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                            {
+                                SendMessage(PlayerName,message);
+                            };
+                            try
+                            {
+                                m_ressourceManager->AddInventory(func,PCIdTo,GoodsName,Quantity);
+                            }
+                            catch(const std::exception& ex)
+                            {
+                                SendMessage(PlayerName,ex.what());
+                            }
+                            catch (const std::string& ex)
+                            {
+                                SendMessage(PlayerName,ex);
+                            }
                         }
                         else
                         {
@@ -208,11 +174,26 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     boost::algorithm::to_lower(GoodsName);
                     int Quantity;
                     stream>>Quantity;
-                    if(Quantity>0&&PCIdTo>0 && IsEmployee(PCId))
+                    if(Quantity>0&&PCIdTo>0 && m_ressourceManager->IsEmployee(PCId))
                     {
-                        if(HasGoods(GoodsName))
+                        if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            RemoveInventory(PlayerName,PCIdTo,GoodsName,Quantity);
+                            std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                            {
+                                SendMessage(PlayerName,message);
+                            };
+                            try
+                            {
+                            m_ressourceManager->RemoveInventory(func,PCIdTo,GoodsName,Quantity);
+                            }
+                            catch(const std::exception& ex)
+                            {
+                                SendMessage(PlayerName,ex.what());
+                            }
+                            catch (const std::string& ex)
+                            {
+                                SendMessage(PlayerName,ex);
+                            }
                         }
                         else
                         {
@@ -228,13 +209,28 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     {
                         PCIdTo=PCId;
                     }
-                    else if(!IsEmployee(PCId))
+                    else if(!m_ressourceManager->IsEmployee(PCId))
                     {
                         return;
                     }
                     if(PCIdTo>0)
                     {
-                        ListInventory(PlayerName,PCIdTo);
+                        std::function<void(std::string)> func=[&PlayerName,&this](std::string message)
+                        {
+                            SendMessage(PlayerId,message);
+                        };
+                        try
+                        {
+                            m_ressourceManager->ListInventory(func,PCIdTo);
+                        }
+                        catch(const std::exception& ex)
+                        {
+                            SendMessage(PlayerName,ex.what());
+                        }
+                        catch (const std::string& ex)
+                        {
+                            SendMessage(PlayerName,ex);
+                        }
                     }
                 }
             }
@@ -256,15 +252,15 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     {
                         try
                         {
-                        if(HasGoods(GoodsName))
+                        if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            int goldAvailable=GetInventory(PCId,"gold");
+                            int goldAvailable=m_ressourceManager->GetInventory(PCId,"gold");
                             if(goldAvailable>=Price)
                             {
                                 int idOrder=m_market->addOrder("BUY",GoodsName,Quantity,Price);
                                 if(idOrder>=0)
                                 {
-                                    AddGoodsToBuy(PCId,GoodsName,idOrder,Quantity,Price);
+                                    m_ressourceManager->AddGoodsToBuy(PCId,GoodsName,idOrder,Quantity,Price);
                                     SendMessage(PlayerName,std::string("Buy Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
                                 }
                             }
@@ -301,15 +297,15 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     {
                         try
                         {
-                        if(HasGoods(GoodsName))
+                        if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            int goodsAvailable=GetInventory(PCId,GoodsName);
+                            int goodsAvailable=m_ressourceManager->GetInventory(PCId,GoodsName);
                             if(goodsAvailable>=Quantity)
                             {
                                 int idOrder=m_market->addOrder("SELL",GoodsName,Quantity,Price);
                                 if(idOrder>=0)
                                 {
-                                    AddGoodsToSell(PCId,GoodsName,idOrder,Quantity,Price);
+                                    m_ressourceManager->AddGoodsToSell(PCId,GoodsName,idOrder,Quantity,Price);
                                     SendMessage(PlayerName,std::string("Sell Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
                                 }
                             }
@@ -336,7 +332,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
             }
         }
         
-        if(IsEmployee(PCId))
+        if(m_ressourceManager->IsEmployee(PCId))
         {
             std::stringstream stream(Message);
             std::string command;
@@ -349,7 +345,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 stream>>PCIdToAdd;
                 if(PCIdToAdd>0)
                 {
-                    if(IsAdmin(PCId))
+                    if(m_ressourceManager->IsAdmin(PCId))
                     {
                         std::string Employee;
                         stream>>Employee;
@@ -368,7 +364,22 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 boost::algorithm::to_lower(GoodsName);
                 std::string GoodsDescription;
                 std::getline(stream,GoodsDescription);
-                AddGoods(PlayerName,GoodsName,GoodsDescription);
+                std::function<void(std::string)> func=[&PlayerName,&this](std::string message)
+                {
+                    SendMessage(PlayerId,message);
+                };
+                try
+                {
+                    m_ressourceManager->AddGoods(func,GoodsName,GoodsDescription);
+                }
+                catch(const std::exception& ex)
+                {
+                    SendMessage(PlayerName,ex.what());
+                }
+                catch (const std::string& ex)
+                {
+                    SendMessage(PlayerName,ex);
+                }
             }
         }
         if(IsAdmin(PCId))
@@ -412,29 +423,11 @@ void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
         std::string PlayerName;
         int permission_level=0;
         GetPCInformation(PCId,PlayerId,name,PlayerName);
-        if(Employee)
+        std::function<void(std::string)> func=[&this,AdderName](std::string message)
         {
-            permission_level=5;
-        }
-        if(HasAccount(PCId))
-        {
-            char *errorMessage;
-            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" PlayerName=")+PlayerName+std::string(" name=")+name+std::string(" permission_level=")+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
-            if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-            {
-                throw std::runtime_error(errorMessage);
-            }
-        }
-        else
-        {
-            char *errorMessage;
-            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+name+std::string("',")       +std::to_string(permission_level)+std::string(")");
-            if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-            {
-                throw std::runtime_error(errorMessage);
-            }
-        }
-        SendMessage(AdderName,std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+name+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level));
+            SendMessage(AdderName,message);
+        };
+        m_ressourceManager->AddAccount(func, PCId, Employee, PlayerId, name, PlayerName)
     }
     catch(const std::exception& ex)
     {
@@ -455,14 +448,9 @@ void SinfarClient::DeleteAccount(std::string DeleterName,int PCId)
         std::string PlayerName;
         int permission_level=0;
         GetPCInformation(PCId,PlayerId,name,PlayerName);
-        if(HasAccount(PCId))
+        if(m_ressourceManager->HasAccount(PCId))
         {
-            char *errorMessage;
-            std::string sql=std::string("DELETE from account ")+std::string(" where PCId=")+std::to_string(PCId);
-            if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-            {
-                throw std::runtime_error(errorMessage);
-            }
+            m_ressourceManager->DeleteAccount(PCId);
         }
         else
         {
@@ -535,296 +523,5 @@ void SinfarClient::GetPCInformation(int PCId,int& PlayerId,std::string& name,std
                 PlayerName=current_player["playerName"];
             }
         }
-    }
-}
-
-void SinfarClient::AddGoods(std::string AdderName,std::string Goodsname,std::string GoodsDescription)
-{
-    try
-    {
-        if(HasGoods(Goodsname))
-        {
-            char *errorMessage;
-            std::string sql=std::string("UPDATE goodsList set goodsDescription='")+GoodsDescription+std::string("' where goodsName='")+Goodsname+std::string("'");
-            if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-            {
-                throw std::runtime_error(errorMessage);
-            }
-        }
-        else
-        {
-            char *errorMessage;
-            std::string sql=std::string("INSERT INTO goodsList VALUES('")+Goodsname+std::string("','")+GoodsDescription+std::string("')");
-            if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-            {
-                throw std::runtime_error(errorMessage);
-            }
-            if(!m_market->symbolIsDefined(Goodsname))
-            {
-                m_market->addBook(Goodsname);
-            }
-        }
-        SendMessage(AdderName,std::string("Goods added sucessfuly: Goodsname=")+Goodsname+std::string(" GoodsDescription=")+GoodsDescription);
-    }
-    catch(const std::exception& ex)
-    {
-        SendMessage(AdderName,ex.what());
-    }
-    catch (const std::string& ex)
-    {
-        SendMessage(AdderName,ex);
-    }
-}
-
-bool SinfarClient::HasGoods(std::string GoodsName)
-{
-    bool banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<bool*>(data)=count>0;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT count(*) FROM goodsList where goodsName='")+GoodsName+std::string("'");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
-void SinfarClient::ListGoods(std::string ListerName)
-{
-    try{
-        std::string message("Lists of Goods:\n");
-        auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-        {
-            if(nbcolumn==2)
-            {
-                *static_cast<std::string*>(data)+=std::string(columnText[0])+std::string(" ")+std::string(columnText[1])+std::string("\n");
-            }
-            return 0;
-        };
-        char *errorMessage;
-        std::string sql=std::string("SELECT * FROM goodsList");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-        SendMessage(ListerName,message);
-    }
-    catch(const std::exception& ex)
-    {
-        SendMessage(ListerName,ex.what());
-    }
-    catch (const std::string& ex)
-    {
-        SendMessage(ListerName,ex);
-    }
-}
-
-void SinfarClient::AddInventory(std::string AdderName,int PCIdTo,std::string GoodsName,int Quantity)
-{
-    try
-    {
-    if(HasInventory(PCIdTo,GoodsName))
-    {
-        Quantity+=GetInventory(PCIdTo,GoodsName);
-        char *errorMessage;
-        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(Quantity)+std::string(" where PCId=")+std::to_string(PCIdTo)+std::string(" and goodsName='")+GoodsName+std::string("'");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-                throw std::runtime_error(errorMessage);
-        }
-    }
-    else
-    {
-        char *errorMessage;
-        std::string sql=std::string("INSERT INTO inventory VALUES(")+std::to_string(PCIdTo)+std::string(",'")+GoodsName+std::string("',")+std::to_string(Quantity)+std::string(")");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-    }
-    SendMessage(AdderName,std::string("Updated inventory of PCId=")+std::to_string(PCIdTo)+std::string(" GoodsName=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity));
-    }
-    catch(const std::exception& ex)
-    {
-        SendMessage(AdderName,ex.what());
-    }
-    catch (const std::string& ex)
-    {
-        SendMessage(AdderName,ex);
-    }
-}
-
-void SinfarClient::RemoveInventory(std::string AdderName,int PCIdTo,std::string GoodsName,int Quantity)
-{
-    try
-    {
-        if(HasInventory(PCIdTo,GoodsName))
-        {
-            Quantity=GetInventory(PCIdTo,GoodsName)-Quantity;
-            if(Quantity>0)
-            {
-                char *errorMessage;
-                std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(Quantity)+std::string(" where PCId=")+std::to_string(PCIdTo)+std::string(" and goodsName='")+GoodsName+std::string("'");
-                if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-                {
-                    throw std::runtime_error(errorMessage);
-                }
-            }
-            else
-            {
-                throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
-            }
-        }
-        else
-        {
-            throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
-        }
-        SendMessage(AdderName,std::string("Updated inventory of PCId=")+std::to_string(PCIdTo)+std::string(" GoodsName=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity));
-    }
-    catch(const std::exception& ex)
-    {
-        SendMessage(AdderName,ex.what());
-    }
-    catch (const std::string& ex)
-    {
-        SendMessage(AdderName,ex);
-    }
-}
-
-bool SinfarClient::HasInventory(int PCIdTo,std::string GoodsName)
-{
-    bool banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<bool*>(data)=count>0;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT count(*) FROM inventory where PCId=")+std::to_string(PCIdTo)+std::string(" and goodsName='")+GoodsName+std::string("'");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
-int SinfarClient::GetInventory(int PCIdTo,std::string GoodsName)
-{
-    int banswer;
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn>0)
-        {
-            int count=std::stoi(columnText[0]);
-            *static_cast<int*>(data)=count;
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT quantity FROM inventory where PCId=")+std::to_string(PCIdTo)+std::string(" and goodsName='")+GoodsName+std::string("'");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-    return banswer;
-}
-
-void SinfarClient::ListInventory(std::string ListerName,int PCId)
-{
-    try{
-        std::string message("Lists of Goods in Invetory:\n");
-        auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-        {
-            if(nbcolumn==2)
-            {
-                *static_cast<std::string*>(data)+=std::string(columnText[0])+std::string(" ")+std::string(columnText[1])+std::string("\n");
-            }
-            return 0;
-        };
-        char *errorMessage;
-        std::string sql=std::string("SELECT goodsName,quantity FROM inventory where PCId=")+std::to_string(PCId);
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-        SendMessage(ListerName,message);
-    }
-    catch(const std::exception& ex)
-    {
-        SendMessage(ListerName,ex.what());
-    }
-    catch (const std::string& ex)
-    {
-        SendMessage(ListerName,ex);
-    }
-}
-
-void SinfarClient::UpdateMarket()
-{
-    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
-    {
-        if(nbcolumn==1)
-        {
-            auto market=static_cast<SinfarClient*>(data)->m_market;
-            if(!market->symbolIsDefined(columnText[0]))
-            {
-                market->addBook(columnText[0]);
-            }
-        }
-        return 0;
-    };
-    char *errorMessage;
-    std::string sql=std::string("SELECT goodsName FROM goodsList");
-    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,this,&errorMessage)!=SQLITE_OK)
-    {
-        throw std::runtime_error(errorMessage);
-    }
-}
-
-void SinfarClient::AddGoodsToBuy(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
-{
-    int UpdateQuantity=GetInventory(PCId,"gold")-Price;
-    if(UpdateQuantity>0)
-    {
-        char *errorMessage;
-        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='gold' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",0")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-    }
-    else
-    {
-        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
-    }
-}
-
-void SinfarClient::AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
-{
-    int UpdateQuantity=GetInventory(PCId,GoodsName)-Quantity;
-    if(UpdateQuantity>0)
-    {
-        char *errorMessage;
-        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='")+GoodsName+std::string("' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",1")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-    }
-    else
-    {
-        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
     }
 }
