@@ -1,11 +1,12 @@
 #include "SinfarClient.h"
 #include <boost/algorithm/string.hpp>    
 
-SinfarClient::SinfarClient(std::shared_ptr<Database> database):m_database(database)
+SinfarClient::SinfarClient(std::shared_ptr<Database> database,std::shared_ptr<orderentry::Market> market):m_database(database),m_market(market)
 {
     char path_temp[]="/tmp/SinfarXXXXXXXXXXXXXXXXXXXX";
     std::string m_temp_dir=std::string(mkdtemp(path_temp));
     m_path=m_temp_dir+std::string("/bot_trader");
+    UpdateMarket();
     Login();
 }
 
@@ -186,7 +187,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     boost::algorithm::to_lower(GoodsName);
                     int Quantity;
                     stream>>Quantity;
-                    if(Quantity>0&&PCIdTo && IsEmployee(PCId))
+                    if(Quantity>0&&PCIdTo>0 && IsEmployee(PCId))
                     {
                         if(HasGoods(GoodsName))
                         {
@@ -234,6 +235,102 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     if(PCIdTo>0)
                     {
                         ListInventory(PlayerName,PCIdTo);
+                    }
+                }
+            }
+            else if(command==std::string("trade") || command==std::string("t"))
+            {
+                std::string subcommand;
+                stream>>subcommand;
+                boost::algorithm::to_lower(subcommand);
+                if(subcommand==std::string("buy") || subcommand==std::string("b"))
+                {
+                    std::string GoodsName;
+                    stream>>GoodsName;
+                    boost::algorithm::to_lower(GoodsName);
+                    int Quantity;
+                    stream>>Quantity;
+                    int Price;
+                    stream>>Price;
+                    if(Quantity>0&&Price>0)
+                    {
+                        try
+                        {
+                        if(HasGoods(GoodsName))
+                        {
+                            int goldAvailable=GetInventory(PCId,"gold");
+                            if(goldAvailable>=Price)
+                            {
+                                int idOrder=m_market->addOrder("BUY",GoodsName,Quantity,Price);
+                                if(idOrder>=0)
+                                {
+                                    AddGoodsToBuy(PCId,GoodsName,idOrder,Quantity,Price);
+                                    SendMessage(PlayerName,std::string("Buy Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
+                                }
+                            }
+                            else
+                            {
+                                SendMessage(PlayerName,std::string("You do not have enought gold: ")+GoodsName);
+                            }
+                        }
+                        else
+                        {
+                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
+                        }
+                        }
+                        catch(const std::exception& ex)
+                        {
+                            SendMessage(PlayerName,ex.what());
+                        }
+                        catch (const std::string& ex)
+                        {
+                            SendMessage(PlayerName,ex);
+                        }
+                    }
+                }
+                else if(subcommand==std::string("sell") || subcommand==std::string("s"))
+                {
+                    std::string GoodsName;
+                    stream>>GoodsName;
+                    boost::algorithm::to_lower(GoodsName);
+                    int Quantity;
+                    stream>>Quantity;
+                    int Price;
+                    stream>>Price;
+                    if(Quantity>0&&Price>0)
+                    {
+                        try
+                        {
+                        if(HasGoods(GoodsName))
+                        {
+                            int goodsAvailable=GetInventory(PCId,GoodsName);
+                            if(goodsAvailable>=Quantity)
+                            {
+                                int idOrder=m_market->addOrder("SELL",GoodsName,Quantity,Price);
+                                if(idOrder>=0)
+                                {
+                                    AddGoodsToSell(PCId,GoodsName,idOrder,Quantity,Price);
+                                    SendMessage(PlayerName,std::string("Sell Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
+                                }
+                            }
+                            else
+                            {
+                                SendMessage(PlayerName,std::string("You do not have enought Goods: ")+GoodsName);
+                            }
+                        }
+                        else
+                        {
+                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
+                        }
+                        }
+                        catch(const std::exception& ex)
+                        {
+                            SendMessage(PlayerName,ex.what());
+                        }
+                        catch (const std::string& ex)
+                        {
+                            SendMessage(PlayerName,ex);
+                        }
                     }
                 }
             }
@@ -462,6 +559,10 @@ void SinfarClient::AddGoods(std::string AdderName,std::string Goodsname,std::str
             {
                 throw std::runtime_error(errorMessage);
             }
+            if(!m_market->symbolIsDefined(Goodsname))
+            {
+                m_market->addBook(Goodsname);
+            }
         }
         SendMessage(AdderName,std::string("Goods added sucessfuly: Goodsname=")+Goodsname+std::string(" GoodsDescription=")+GoodsDescription);
     }
@@ -667,5 +768,63 @@ void SinfarClient::ListInventory(std::string ListerName,int PCId)
     catch (const std::string& ex)
     {
         SendMessage(ListerName,ex);
+    }
+}
+
+void SinfarClient::UpdateMarket()
+{
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn==1)
+        {
+            auto market=static_cast<SinfarClient*>(data)->m_market;
+            if(!market->symbolIsDefined(columnText[0]))
+            {
+                market->addBook(columnText[0]);
+            }
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT goodsName FROM goodsList");
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,this,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+}
+
+void SinfarClient::AddGoodsToBuy(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
+{
+    int UpdateQuantity=GetInventory(PCId,"gold")-Price;
+    if(UpdateQuantity>0)
+    {
+        char *errorMessage;
+        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='gold' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",0")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+    }
+    else
+    {
+        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
+    }
+}
+
+void SinfarClient::AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
+{
+    int UpdateQuantity=GetInventory(PCId,GoodsName)-Quantity;
+    if(UpdateQuantity>0)
+    {
+        char *errorMessage;
+        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='")+GoodsName+std::string("' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",1")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+    }
+    else
+    {
+        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
     }
 }

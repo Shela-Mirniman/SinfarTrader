@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include "Market.h"
 
 using json = nlohmann::json;
 
@@ -19,11 +20,13 @@ class SinfarClient
 {
     std::string m_path;
     std::shared_ptr<Database> m_database;
+    std::shared_ptr<orderentry::Market> m_market;
 public:
-    SinfarClient(std::shared_ptr<Database> database);
+    SinfarClient(std::shared_ptr<Database> database,std::shared_ptr<orderentry::Market> market);
     ~SinfarClient();
     void DoLoop();
 private:
+    void UpdateMarket();
     void Login();
     void Logout();
     std::string PollMessage();
@@ -43,6 +46,8 @@ private:
     void RemoveInventory(std::string AdderName,int PCId,std::string GoodsName,int quantity);
     bool HasInventory(int PCId,std::string GoodsName);
     int GetInventory(int PCId,std::string GoodsName);
+    void AddGoodsToBuy(int PCId,std::string GoodsName,int orderID,int Quantity,int price);
+    void AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int price);
     void ListInventory(std::string ListerName,int PCId);
 };
 

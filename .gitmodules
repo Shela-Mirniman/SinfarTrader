@@ -1,0 +1,3 @@
+[submodule "liquibook"]
+	path = liquibook
+	url = https://github.com/objectcomputing/liquibook.git

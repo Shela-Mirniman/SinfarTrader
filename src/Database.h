@@ -2,6 +2,7 @@
 #include <string>
 #include <sqlite3.h>
 #include <stdexcept>
+#include <iostream>
 
 class Database
 {
@@ -10,5 +11,3 @@ public:
     Database(std::string databasepath);
     ~Database();
 };
-
-#include "Database.tpp"

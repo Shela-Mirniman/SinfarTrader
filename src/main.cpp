@@ -7,6 +7,7 @@
 #include "SinfarClient.h"
 #include "Database.h"
 #include <signal.h>
+#include "Market.h"
 
 sig_atomic_t stopFlag = 0;
 
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
     signal( SIGABRT, &handler );
     
     std::shared_ptr<Database> database(std::make_shared<Database>(std::string("testDatabase")));
+    std::shared_ptr<orderentry::Market> market(std::make_shared<orderentry::Market>(database));
     
     Pistache::Port port(9080);
 
@@ -30,7 +32,7 @@ int main(int argc, char *argv[])
     Pistache::Address addr(Pistache::Ipv4::any(), port);
 
     MarketServer server(addr,thr);
-    SinfarClient client(database);
+    SinfarClient client(database,market);
     while(stopFlag == 0)
     {
         client.DoLoop();
