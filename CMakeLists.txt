@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 3.0.2)
+project (Sinfar_Trading)
+find_package (sqlite3)
+add_executable(main src/main.cpp)
+target_link_libraries(main pistache pthread curlpp curl sqlite3)
