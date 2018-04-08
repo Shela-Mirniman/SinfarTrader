@@ -8,10 +8,10 @@
 class RessourcesManager
 {
     std::shared_ptr<Database> m_database;
-    std::shared_ptr<Market> m_market;
+    std::shared_ptr<orderentry::Market> m_market;
 public:
     RessourcesManager(std::shared_ptr<Database> database);
-    void AddMarket(std::shared_ptr<Market> market);
+    void AddMarket(std::shared_ptr<orderentry::Market> market);
     ~RessourcesManager();
     void ListInventory(std::function<void(std::string)> func,int PCId);
     void AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int price);
@@ -29,4 +29,9 @@ public:
     bool IsEmployee(int PCId);
     bool IsAdmin(int PCId);
     void UpdateMarket();
+    bool OrderExists(std::string orderID);
+    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    void on_accept(const orderentry::OrderPtr& order);
+    void on_fill(const orderentry::OrderPtr& order,const orderentry::OrderPtr& matched_order,liquibook::book::Quantity fill_qty,liquibook::book::Cost fill_cost);
+    void UpdateOrderSeed(int orderSeed);
 };

@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0.2)
 project (Sinfar_Trading)
 include_directories(liquibook/src)
-add_executable(main src/main.cpp src/Order.cpp src/Market.cpp src/Database.cpp)
+add_executable(main src/main.cpp src/Order.cpp src/Market.cpp src/Database.cpp src/RessourcesManager.cpp)
 target_link_libraries(main pistache pthread curlpp curl sqlite3)

@@ -1,5 +1,5 @@
 #include "SinfarClient.h"
-#include <boost/algorithm/string.hpp>    
+#include <boost/algorithm/string.hpp> 
 
 SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):m_ressourceManager(ressourceManager)
 {
@@ -107,7 +107,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
             boost::algorithm::to_lower(command);
             if(command==std::string("lg") || command==std::string("listgoods"))
             {
-                std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                std::function<void(std::string)> func=[this,PlayerName](std::string message)
                 {
                     SendMessage(PlayerName,message);
                 };
@@ -142,7 +142,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     {
                         if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                            std::function<void(std::string)> func=[this,PlayerName](std::string message)
                             {
                                 SendMessage(PlayerName,message);
                             };
@@ -178,7 +178,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     {
                         if(m_ressourceManager->HasGoods(GoodsName))
                         {
-                            std::function<void(std::string)> func=[&this,PlayerName](std::string message)
+                            std::function<void(std::string)> func=[this,PlayerName](std::string message)
                             {
                                 SendMessage(PlayerName,message);
                             };
@@ -215,9 +215,9 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     }
                     if(PCIdTo>0)
                     {
-                        std::function<void(std::string)> func=[&PlayerName,&this](std::string message)
+                        std::function<void(std::string)> func=[&PlayerName,this](std::string message)
                         {
-                            SendMessage(PlayerId,message);
+                            SendMessage(PlayerName,message);
                         };
                         try
                         {
@@ -255,12 +255,15 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                         if(m_ressourceManager->HasGoods(GoodsName))
                         {
                             int goldAvailable=m_ressourceManager->GetInventory(PCId,"gold");
-                            if(goldAvailable>=Price)
+                            if(goldAvailable>=Price*Quantity)
                             {
-                                int idOrder=m_market->addOrder("BUY",GoodsName,Quantity,Price);
+                                int idOrder=m_ressourceManager->addOrder(PCId,"BUY",GoodsName,Quantity,Price);
                                 if(idOrder>=0)
                                 {
-                                    m_ressourceManager->AddGoodsToBuy(PCId,GoodsName,idOrder,Quantity,Price);
+                                    std::function<void(std::string)> func=[&PlayerName,this](std::string message)
+                                    {
+                                    };
+                                    m_ressourceManager->RemoveInventory(func,PCId,"gold",Price*Quantity);
                                     SendMessage(PlayerName,std::string("Buy Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
                                 }
                             }
@@ -302,10 +305,13 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                             int goodsAvailable=m_ressourceManager->GetInventory(PCId,GoodsName);
                             if(goodsAvailable>=Quantity)
                             {
-                                int idOrder=m_market->addOrder("SELL",GoodsName,Quantity,Price);
+                                int idOrder=m_ressourceManager->addOrder(PCId,"SELL",GoodsName,Quantity,Price);
                                 if(idOrder>=0)
                                 {
-                                    m_ressourceManager->AddGoodsToSell(PCId,GoodsName,idOrder,Quantity,Price);
+                                    std::function<void(std::string)> func=[&PlayerName,this](std::string message)
+                                    {
+                                    };
+                                    m_ressourceManager->RemoveInventory(func,PCId,GoodsName,Quantity);
                                     SendMessage(PlayerName,std::string("Sell Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
                                 }
                             }
@@ -364,9 +370,9 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 boost::algorithm::to_lower(GoodsName);
                 std::string GoodsDescription;
                 std::getline(stream,GoodsDescription);
-                std::function<void(std::string)> func=[&PlayerName,&this](std::string message)
+                std::function<void(std::string)> func=[&PlayerName,this](std::string message)
                 {
-                    SendMessage(PlayerId,message);
+                    SendMessage(PlayerName,message);
                 };
                 try
                 {
@@ -382,7 +388,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 }
             }
         }
-        if(IsAdmin(PCId))
+        if(m_ressourceManager->IsAdmin(PCId))
         {
             std::stringstream stream(Message);
             std::string command;
@@ -423,11 +429,11 @@ void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
         std::string PlayerName;
         int permission_level=0;
         GetPCInformation(PCId,PlayerId,name,PlayerName);
-        std::function<void(std::string)> func=[&this,AdderName](std::string message)
+        std::function<void(std::string)> func=[this,AdderName](std::string message)
         {
             SendMessage(AdderName,message);
         };
-        m_ressourceManager->AddAccount(func, PCId, Employee, PlayerId, name, PlayerName)
+        m_ressourceManager->AddAccount(func, PCId, Employee, PlayerId, name, PlayerName);
     }
     catch(const std::exception& ex)
     {

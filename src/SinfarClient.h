@@ -7,12 +7,12 @@
 #include <curlpp/Form.hpp>
 
 #include "json.hpp"
-#include "RessourcesManager.h"
 #include <memory>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include "Market.h"
+#include "RessourcesManager.h"
 
 using json = nlohmann::json;
 

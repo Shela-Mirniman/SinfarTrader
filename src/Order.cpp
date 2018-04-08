@@ -7,7 +7,7 @@
 namespace orderentry
 {
 
-Order::Order(const std::string & id,
+Order::Order(const std::string & id,int PCId,
     bool buy_side,
     liquibook::book::Quantity quantity,
     std::string symbol,
@@ -26,7 +26,7 @@ Order::Order(const std::string & id,
     , quantityFilled_(0)
     , quantityOnMarket_(0)
     , fillCost_(0)
-    , verbose_(false)
+    , verbose_(false),PCId_(PCId)
 
 {
 }
@@ -35,6 +35,12 @@ std::string
 Order::order_id() const
 {
     return id_;
+}
+
+int
+Order::PCId() const
+{
+    return PCId_;
 }
 
 bool 

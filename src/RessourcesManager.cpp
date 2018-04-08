@@ -2,21 +2,19 @@
 
 RessourcesManager::RessourcesManager(std::shared_ptr<Database> database):m_database(database)
 {
-    UpdateMarket();
 }
 
 RessourcesManager::~RessourcesManager()
 {
 }
 
-void RessourcesManager::AddMarket(std::shared_ptr<Market> market)
+void RessourcesManager::AddMarket(std::shared_ptr<orderentry::Market> market)
 {
     m_market=market;
 }
 
 void RessourcesManager::ListInventory(std::function<void(std::string)> func,int PCId)
 {
-    
     std::string message("Lists of Goods in Invetory:\n");
     auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
     {
@@ -33,42 +31,6 @@ void RessourcesManager::ListInventory(std::function<void(std::string)> func,int 
         throw std::runtime_error(errorMessage);
     }
     func(message);
-}
-
-void RessourcesManager::AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
-{
-    int UpdateQuantity=GetInventory(PCId,GoodsName)-Quantity;
-    if(UpdateQuantity>0)
-    {
-        char *errorMessage;
-        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='")+GoodsName+std::string("' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",1")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-    }
-    else
-    {
-        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
-    }
-}
-
-void RessourcesManager::AddGoodsToBuy(int PCId,std::string GoodsName,int orderID,int Quantity,int Price)
-{
-    int UpdateQuantity=GetInventory(PCId,"gold")-Price;
-    if(UpdateQuantity>0)
-    {
-        char *errorMessage;
-        std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(UpdateQuantity)+std::string(" where PCId=")+std::to_string(PCId)+std::string(" and goodsName='gold' ; INSERT INTO inventory_trading VALUES(")+std::to_string(orderID)+std::string(",0")+std::string(",'")+GoodsName+std::string("',")+std::to_string(PCId)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(Price)+std::string(")");
-        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
-        {
-            throw std::runtime_error(errorMessage);
-        }
-    }
-    else
-    {
-        throw std::runtime_error(std::string("Quantity going negative ")+std::to_string(Quantity));
-    }
 }
 
 int RessourcesManager::GetInventory(int PCIdTo,std::string GoodsName)
@@ -135,7 +97,6 @@ void RessourcesManager::AddInventory(std::function<void(std::string)> func,int P
         }
     }
     func(std::string("Updated inventory of PCId=")+std::to_string(PCIdTo)+std::string(" GoodsName=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity));
-    }
 }
 
 void RessourcesManager::RemoveInventory(std::function<void(std::string)> func,int PCIdTo,std::string GoodsName,int Quantity)
@@ -334,13 +295,14 @@ bool RessourcesManager::IsAdmin(int PCId)
     return banswer;
 }
 
-void SinfarClient::UpdateMarket()
+void RessourcesManager::UpdateMarket()
+{
 {
     auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
     {
         if(nbcolumn==1)
         {
-            auto market=static_cast<SinfarClient*>(data)->m_market;
+            auto market=static_cast<RessourcesManager*>(data)->m_market;
             if(!market->symbolIsDefined(columnText[0]))
             {
                 market->addBook(columnText[0]);
@@ -351,6 +313,137 @@ void SinfarClient::UpdateMarket()
     char *errorMessage;
     std::string sql=std::string("SELECT goodsName FROM goodsList");
     if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,this,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+}
+{
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn==9)
+        {
+            auto market=static_cast<RessourcesManager*>(data)->m_market;
+            std::string order("SELL");
+            if(std::stoi(columnText[2]))
+            {
+                order=std::string("BUY");
+            }
+            market->addOrder(columnText[0],std::stoi(columnText[1]),order,columnText[4],std::stoi(columnText[3]),std::stoi(columnText[5]),std::stoi(columnText[6]),std::stoi(columnText[7]),std::stoi(columnText[8]));
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT * FROM market");
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,this,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+}
+{
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn==1)
+        {
+            auto market=static_cast<RessourcesManager*>(data)->m_market;
+            market->setOrderSeed(std::stoi(columnText[0]));
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT * FROM order_seed");
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,this,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+}
+}
+
+void RessourcesManager::UpdateOrderSeed(int orderSeed)
+{
+     char *errorMessage;
+    std::string sql=std::string("UPDATE order_seed set order_seed=")+std::to_string(orderSeed);
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+}
+
+int RessourcesManager::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+{
+    return m_market->addOrder(PCId,side,symbol,quantity,price,stopPrice,aon,ioc);
+}
+
+bool RessourcesManager::OrderExists(std::string orderID)
+{
+    bool banswer;
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn>0)
+        {
+            int count=std::stoi(columnText[0]);
+            *static_cast<bool*>(data)=count>0;
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT count(*) FROM market where orderID=")+orderID;
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    return banswer;
+}
+
+void RessourcesManager::on_accept(const orderentry::OrderPtr& order)
+{
+    if(!OrderExists(order->order_id()))
+    {
+        char *errorMessage;
+        std::string sql=std::string("INSERT INTO market VALUES(")+order->order_id()+std::string(",")+std::to_string(order->PCId())+std::string(",")+std::to_string(order->is_buy())+std::string(",")+std::to_string(order->quantityOnMarket())+std::string(",'")+order->symbol()+std::string("',")+std::to_string(order->price())+std::string(",")+std::to_string(order->stop_price())+std::string(",")+std::to_string(order->all_or_none())+std::string(",")+std::to_string(order->immediate_or_cancel())+std::string(")");
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+    }
+}
+
+void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderentry::OrderPtr& matched_order,liquibook::book::Quantity fill_qty,liquibook::book::Cost fill_cost)
+{
+    std::function<void(std::string)> func=[](std::string)
+    {
+    };
+    orderentry::OrderPtr orderBuy=order;
+    orderentry::OrderPtr orderSell=matched_order;
+    if(!orderBuy->is_buy() && orderSell->is_buy())
+    {
+        std::swap(orderBuy,orderSell);
+    }
+    AddInventory(func,orderBuy->PCId(),orderBuy->symbol(),fill_qty);
+    if(fill_cost-orderBuy->price()*fill_qty>0)
+    {
+        AddInventory(func,orderBuy->PCId(),"gold",fill_cost-orderBuy->price()*fill_qty);
+    }
+    AddInventory(func,orderSell->PCId(),"gold",fill_cost);
+    char *errorMessage;
+    std::string sql;
+    if(order->quantityOnMarket()>0)
+    {
+        sql+=std::string("UPDATE market set quantity=")+std::to_string(order->quantityOnMarket())+std::string(" where orderID=")+order->order_id();
+    }
+    else
+    {
+        sql+=std::string("DELETE from market where orderID=")+order->order_id();
+    }
+    sql+=std::string("; ");
+    if(matched_order->quantityOnMarket()>0)
+    {
+        sql+=std::string("UPDATE market set quantity=")+std::to_string(matched_order->quantityOnMarket())+std::string(" where orderID=")+matched_order->order_id();
+    }
+    else
+    {
+        sql+=std::string("DELETE from market where orderID=")+matched_order->order_id();
+    }
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
     {
         throw std::runtime_error(errorMessage);
     }

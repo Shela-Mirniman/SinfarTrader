@@ -45,7 +45,7 @@ public:
     };    
     typedef std::vector<StateChange> History;
 public:
-    Order(const std::string & id,
+    Order(const std::string & id,int PCId,
         bool buy_side,
         liquibook::book::Quantity quantity,
         std::string symbol,
@@ -87,6 +87,8 @@ public:
     std::string symbol() const;
 
     std::string order_id() const;
+    
+    int PCId() const;
 
     uint32_t quantityFilled() const;
 
@@ -124,6 +126,7 @@ public:
 
 private:
     std::string id_;
+    int PCId_;
     bool buy_side_;
     std::string symbol_;
     liquibook::book::Quantity quantity_;

@@ -7,6 +7,8 @@
 #include <cctype>
 #include <locale>
 
+#include "RessourcesManager.h"
+
 namespace {
     ///////////////////////
     // depth display helper
@@ -72,8 +74,8 @@ namespace orderentry
 
 uint32_t Market::orderIdSeed_ = 0;
 
-Market::Market(std::shared_ptr<Database> database,std::ostream * out)
-: logFile_(out),m_database(database)
+Market::Market(std::shared_ptr<RessourcesManager> ressourcesManager,std::ostream * out)
+: logFile_(out),m_ressourcesManager(ressourcesManager)
 {
 }
 
@@ -89,6 +91,7 @@ Market::on_accept(const OrderPtr& order)
 {
     order->onAccepted();
     out() << "\tAccepted: " <<*order<< std::endl;
+    m_ressourcesManager->on_accept(order);
 }
 
 void 
@@ -96,7 +99,6 @@ Market::on_reject(const OrderPtr& order, const char* reason)
 {
     order->onRejected(reason);
     out() << "\tRejected: " <<*order<< ' ' << reason << std::endl;
-
 }
 
 void 
@@ -111,6 +113,7 @@ Market::on_fill(const OrderPtr& order,
         << fill_qty << " Shares for " << fill_cost << ' ' <<*order<< std::endl;
     out() << (matched_order->is_buy() ? "\tBought: " : "\tSold: ") 
         << fill_qty << " Shares for " << fill_cost << ' ' << *matched_order << std::endl;
+    m_ressourcesManager->on_fill(order,matched_order,fill_qty,fill_cost);
 }
 
 void 
@@ -222,11 +225,22 @@ Market::symbolIsDefined(const std::string & symbol)
     return book != books_.end();
 }
 
-int Market::addOrder(std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+void Market::setOrderSeed(uint32_t orderIdSeed)
+{
+    orderIdSeed_=orderIdSeed;
+}
+
+int Market::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
 {
     std::string orderId = std::to_string(++orderIdSeed_);
+    m_ressourcesManager->UpdateOrderSeed(orderIdSeed_);
+    return addOrder(orderId,PCId,side,symbol,quantity,price,stopPrice,aon,ioc);
+}
+
+int Market::addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+{
     int iorderId=std::stoi(orderId);
-    OrderPtr order = std::make_shared<Order>(orderId, side == "BUY", quantity, symbol, price, stopPrice, aon, ioc);
+    OrderPtr order = std::make_shared<Order>(orderId,PCId, side == "BUY", quantity, symbol, price, stopPrice, aon, ioc);
     const liquibook::book::OrderConditions AON(liquibook::book::oc_all_or_none);
     const liquibook::book::OrderConditions IOC(liquibook::book::oc_immediate_or_cancel);
     const liquibook::book::OrderConditions NOC(liquibook::book::oc_no_conditions);

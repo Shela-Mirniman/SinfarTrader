@@ -10,7 +10,8 @@
 #include <algorithm>
 #include <map>
 #include <memory>
-#include "Database.h"
+
+class RessourcesManager;
 
 
 namespace orderentry
@@ -35,13 +36,15 @@ class Market
     std::ostream * logFile_;
     OrderMap orders_;
     SymbolToBookMap books_;
-    std::shared_ptr<Database> m_database;
+    std::shared_ptr<RessourcesManager> m_ressourcesManager;
 public:
-    Market(std::shared_ptr<Database> database,std::ostream * logFile = &std::cout);
+    void setOrderSeed(uint32_t orderIdSeed);
+    Market(std::shared_ptr<RessourcesManager> ressourcesManager,std::ostream * logFile = &std::cout);
     ~Market();
     OrderBookPtr addBook(const std::string & symbol);
     bool symbolIsDefined(const std::string & symbol);
-    int addOrder(std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    int addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
     OrderBookPtr findBook(const std::string & symbol);
     
     /////////////////////////////////////
