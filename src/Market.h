@@ -38,6 +38,8 @@ class Market
     SymbolToBookMap books_;
     std::shared_ptr<RessourcesManager> m_ressourcesManager;
 public:
+    const OrderPtr GetOrder(std::string orderId);
+    void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
     void setOrderSeed(uint32_t orderIdSeed);
     Market(std::shared_ptr<RessourcesManager> ressourcesManager,std::ostream * logFile = &std::cout);
     ~Market();

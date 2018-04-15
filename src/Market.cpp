@@ -99,6 +99,7 @@ Market::on_reject(const OrderPtr& order, const char* reason)
 {
     order->onRejected(reason);
     out() << "\tRejected: " <<*order<< ' ' << reason << std::endl;
+    m_ressourcesManager->on_reject(order,reason);
 }
 
 void 
@@ -121,12 +122,14 @@ Market::on_cancel(const OrderPtr& order)
 {
     order->onCancelled();
     out() << "\tCanceled: " << *order<< std::endl;
+    m_ressourcesManager->on_cancel(order);
 }
 
 void Market::on_cancel_reject(const OrderPtr& order, const char* reason)
 {
     order->onCancelRejected(reason);
     out() << "\tCancel Reject: " <<*order<< ' ' << reason << std::endl;
+    m_ressourcesManager->on_cancel_reject(order,reason);
 }
 
 void Market::on_replace(const OrderPtr& order, 
@@ -144,6 +147,7 @@ void Market::on_replace(const OrderPtr& order,
         out() << " PRICE " << new_price;
     }
     out() <<*order<< std::endl;
+    m_ressourcesManager->on_replace(order,size_delta,new_price);
 }
 
 void 
@@ -151,6 +155,7 @@ Market::on_replace_reject(const OrderPtr& order, const char* reason)
 {
     order->onReplaceRejected(reason);
     out() << "\tReplace Reject: " <<*order<< ' ' << reason << std::endl;
+    m_ressourcesManager->on_replace_reject(order,reason);
 }
 
 ////////////////////////////////////
@@ -274,6 +279,44 @@ Market::findBook(const std::string & symbol)
         result = entry->second;
     }
     return result;
+}
+
+void Market::ListPriceBook(std::function<void(std::string)> func,std::string GoodsName)
+{
+    if(symbolIsDefined(GoodsName))
+    {
+        auto book =findBook(GoodsName);
+        if(!book)
+        {
+            throw std::runtime_error(std::string("No book with name ")+GoodsName);
+        }
+        else
+        {
+            auto depthInstance=static_cast<DepthOrderBook*>(book.get())->depth();
+            std::string message("Buy:\n");
+            for(auto depthI=depthInstance.last_bid_level();depthI>=depthInstance.bids();depthI--)
+            {
+                if(depthI->aggregate_qty()>0)
+                {
+                    message+=std::to_string(depthI->aggregate_qty())+std::string(" @ ")+std::to_string(depthI->price())+std::string("\n");
+                }
+            }
+            message+=std::string("Sell:\n");
+            std::for_each(depthInstance.asks(),depthInstance.last_ask_level(),[&message](auto depthI)
+            {
+                if(depthI.aggregate_qty()>0)
+                {
+                    message+=std::to_string(depthI.aggregate_qty())+std::string(" @ ")+std::to_string(depthI.price())+std::string("\n");
+                }
+            });
+            func(message);
+        }
+    }
+}
+
+const OrderPtr Market::GetOrder(std::string orderId)
+{
+    return orders_[orderId];
 }
 
 

@@ -35,9 +35,10 @@ int main(int argc, char *argv[])
     Pistache::Address addr(Pistache::Ipv4::any(), port);
 
     MarketServer server(addr,thr);
-    SinfarClient client(ressource);
+    std::shared_ptr<SinfarClient> client(std::make_shared<SinfarClient>(ressource));
+    ressource->AddClient(client);
     while(stopFlag == 0)
     {
-        client.DoLoop();
+        client->DoLoop();
     };
 }

@@ -13,6 +13,11 @@ void RessourcesManager::AddMarket(std::shared_ptr<orderentry::Market> market)
     m_market=market;
 }
 
+void RessourcesManager::AddClient(std::shared_ptr<SinfarClient> client)
+{
+    m_client=client;
+}
+
 void RessourcesManager::ListInventory(std::function<void(std::string)> func,int PCId)
 {
     std::string message("Lists of Goods in Invetory:\n");
@@ -172,7 +177,7 @@ void RessourcesManager::AddGoods(std::function<void(std::string)> func,std::stri
         if(HasGoods(Goodsname))
         {
             char *errorMessage;
-            std::string sql=std::string("UPDATE goodsList set goodsDescription='")+GoodsDescription+std::string("' where goodsName='")+Goodsname+std::string("'");
+            std::string sql=std::string("UPDATE goodsList set goodsDescription='")+Escape(GoodsDescription)+std::string("' where goodsName='")+Goodsname+std::string("'");
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
@@ -181,7 +186,7 @@ void RessourcesManager::AddGoods(std::function<void(std::string)> func,std::stri
         else
         {
             char *errorMessage;
-            std::string sql=std::string("INSERT INTO goodsList VALUES('")+Goodsname+std::string("','")+GoodsDescription+std::string("')");
+            std::string sql=std::string("INSERT INTO goodsList VALUES('")+Goodsname+std::string("','")+Escape(GoodsDescription)+std::string("')");
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
@@ -191,7 +196,7 @@ void RessourcesManager::AddGoods(std::function<void(std::string)> func,std::stri
                 m_market->addBook(Goodsname);
             }
         }
-        func(std::string("Goods added sucessfuly: Goodsname=")+Goodsname+std::string(" GoodsDescription=")+GoodsDescription);
+        func(std::string("Goods added sucessfuly: Goodsname=")+Goodsname+std::string(" GoodsDescription=")+Escape(GoodsDescription));
 }
 
 bool RessourcesManager::HasAccount(int PCId)
@@ -225,7 +230,7 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         if(HasAccount(PCId))
         {
             char *errorMessage;
-            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" PlayerName=")+PlayerName+std::string(" name=")+name+std::string(" permission_level=")+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
+            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" , PlayerName='")+PlayerName+std::string("' , name='")+Escape(name)+std::string("' , permission_level=")+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
@@ -234,13 +239,13 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         else
         {
             char *errorMessage;
-            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+name+std::string("',")       +std::to_string(permission_level)+std::string(")");
+            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+Escape(name)+std::string("',")       +std::to_string(permission_level)+std::string(")");
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
             }
         }
-        func(std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+name+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level));
+        func(std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+Escape(name)+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level));
 }
 
 void RessourcesManager::DeleteAccount(int PCId)
@@ -396,6 +401,9 @@ bool RessourcesManager::OrderExists(std::string orderID)
 
 void RessourcesManager::on_accept(const orderentry::OrderPtr& order)
 {
+    auto func=m_client->GetMessager(order->PCId());
+    try
+    {
     if(!OrderExists(order->order_id()))
     {
         char *errorMessage;
@@ -404,6 +412,29 @@ void RessourcesManager::on_accept(const orderentry::OrderPtr& order)
         {
             throw std::runtime_error(errorMessage);
         }
+        std::string type_Order("Sell");
+        if(order->is_buy())
+        {
+            type_Order=std::string("Buy");
+        }
+        if(order->is_buy())
+        {
+            RemoveInventory(func,order->PCId(),std::string("gold"),order->quantityOnMarket()*order->price());
+        }
+        else
+        {
+            RemoveInventory(func,order->PCId(),order->symbol(),order->quantityOnMarket());
+        }
+        func(type_Order+std::string(" order accepted for ")+std::to_string(order->quantityOnMarket())+std::string(" ")+order->symbol()+std::string(" at ")+std::to_string(order->price()));
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
     }
 }
 
@@ -448,3 +479,390 @@ void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderent
         throw std::runtime_error(errorMessage);
     }
 }
+
+void RessourcesManager::DebugListMarket(std::function<void(std::string)> func)
+{
+        std::string message("Lists of Orders:\n");
+        auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+        {
+            if(nbcolumn==9)
+            {
+                *static_cast<std::string*>(data)+=std::string("OrderID=")+std::string(columnText[0])+std::string(" PCId=")+std::string(columnText[1])+std::string(" IsBuy=")+std::string(columnText[2])+std::string(" GoodsName=")+std::string(columnText[4])+std::string(" Quantity=")+std::string(columnText[3])+std::string(" Price=")+std::string(columnText[5])+std::string("\n");
+            }
+            return 0;
+        };
+        char *errorMessage;
+        std::string sql=std::string("SELECT * FROM market");
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+        func(message);
+}
+
+void RessourcesManager::ListOrderMarket(std::function<void(std::string)> func,int PCId)
+{
+    std::string message("Lists of MyOrders:\n");
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+        {
+            if(nbcolumn==9)
+            {
+                std::string action(" SELL ");
+                if(std::stoi(columnText[2]))
+                {
+                    action=" BUY ";
+                }
+                *static_cast<std::string*>(data)+=std::string("OrderID=")+std::string(columnText[0])+action+std::string(" GoodsName=")+std::string(columnText[4])+std::string(" Quantity=")+std::string(columnText[3])+std::string(" Price=")+std::string(columnText[5])+std::string("\n");
+            }
+            return 0;
+        };
+        char *errorMessage;
+        std::string sql=std::string("SELECT * FROM market where PCId="+std::to_string(PCId));
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+        func(message);
+}
+
+void RessourcesManager::ListPriceBook(std::function<void(std::string)> func,std::string GoodsName)
+{
+    m_market->ListPriceBook(func,GoodsName);
+}
+
+void RessourcesManager::OrderInfo(std::string orderID,int& price,int& quantity,std::string& goodsName,bool& isBuy)
+{
+    auto order=m_market->GetOrder(orderID);
+    goodsName=order->symbol();
+    price=order->price();
+    quantity=order->quantityOnMarket()+order->quantityFilled();
+    isBuy=order->is_buy();
+}
+
+bool RessourcesManager::replaceOrder(int orderID,int dquantity,int newprice)
+{
+    auto order=m_market->GetOrder(std::to_string(orderID));
+    std::string goodsName=order->symbol();
+    auto book=m_market->findBook(goodsName);
+    bool sucess=book->replace(order,dquantity,newprice);
+}
+
+void RessourcesManager::Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func)
+{
+    if(Quantity>0&&PCIdTo>0&&IsEmployee(PCId))
+    {
+        if(HasGoods(GoodsName))
+        {
+            try
+            {
+                AddInventory(func,PCIdTo,GoodsName,Quantity);
+            }
+            catch(const std::exception& ex)
+            {
+                func(ex.what());
+            }
+            catch (const std::string& ex)
+            {
+                func(ex);
+            }
+        }
+        else
+        {
+            func(std::string("GoodsName non existant: ")+GoodsName);
+        }
+    }
+}
+
+void RessourcesManager::Command_InventoryRemove(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func)
+{
+    if(Quantity>0&&PCIdTo>0 && IsEmployee(PCId))
+    {
+        if(HasGoods(GoodsName))
+        {
+            try
+            {
+                RemoveInventory(func,PCIdTo,GoodsName,Quantity);
+            }
+            catch(const std::exception& ex)
+            {
+                func(ex.what());
+            }
+            catch (const std::string& ex)
+            {
+                func(ex);
+            }
+        }
+        else
+        {
+            func(std::string("GoodsName non existant: ")+GoodsName);
+        }
+    }
+}
+
+void RessourcesManager::Command_ListInventory(int PCId,int PCIdTo,std::function<void(std::string)> func)
+{
+    if(PCIdTo==-1)
+    {
+        PCIdTo=PCId;
+    }
+    else if(IsEmployee(PCId))
+    {
+        return;
+    }
+    if(PCIdTo>0)
+    {
+        try
+        {
+            ListInventory(func,PCIdTo);
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+
+void RessourcesManager::Command_TradeBuy(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func)
+{
+    if(Quantity>0&&Price>0)
+    {
+        try
+        {
+        if(HasGoods(GoodsName)&& GoodsName!=std::string("gold"))
+        {
+            int goldAvailable=GetInventory(PCId,"gold");
+            if(goldAvailable>=Price*Quantity)
+            {
+                int idOrder=addOrder(PCId,"BUY",GoodsName,Quantity,Price);
+            }
+            else if(GoodsName==std::string("gold"))
+            {
+                func(std::string("You cannot trade gold with gold!!!!:"));
+            }
+            else
+            {
+                func(std::string("You do not have enought gold: ")+GoodsName);
+            }
+        }
+        else
+        {
+            func(std::string("GoodsName non existant: ")+GoodsName);
+        }
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+
+void RessourcesManager::Command_TradeSell(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func)
+{
+    if(Quantity>0&&Price>0)
+    {
+        try
+        {
+            if(HasGoods(GoodsName)&&GoodsName!=std::string("gold"))
+            {
+                int goodsAvailable=GetInventory(PCId,GoodsName);
+                if(goodsAvailable>=Quantity)
+                {
+                    int idOrder=addOrder(PCId,"SELL",GoodsName,Quantity,Price);
+                }
+                else
+                {
+                    func(std::string("You do not have enought Goods: ")+GoodsName);
+                }
+            }
+            else if(GoodsName==std::string("gold"))
+            {
+                func(std::string("You cannot trade gold with gold!!!!:"));
+            }
+            else
+            {
+                func(std::string("GoodsName non existant: ")+GoodsName);
+            }
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+
+void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int Price,std::function<void(std::string)> func)
+{
+    if(Price>0)
+    {
+        try
+        {
+            int priceOld;
+            int quantityOld;
+            std::string goodsName;
+            bool isBuy;
+            OrderInfo(std::to_string(orderID),priceOld,quantityOld,goodsName,isBuy);
+            if(isBuy&&HasGoods(goodsName)&& goodsName!=std::string("gold"))
+            {
+                int goldAvailable=GetInventory(PCId,"gold");
+                if(goldAvailable>=(Price*(quantityOld+dQuantity)-priceOld*quantityOld))
+                {
+                    int priceChange;
+                    int quantityChange;
+                    int totalPriceChange;
+                    bool sucess=replaceOrder(orderID,dQuantity,Price);
+                }
+            }
+            else if(!isBuy&&HasGoods(goodsName)&& goodsName!=std::string("gold"))
+            {
+                int goodsAvailable=GetInventory(PCId,goodsName);
+                if(goodsAvailable>=dQuantity)
+                {
+                    int priceChange;
+                    int quantityChange;
+                    int totalPriceChange;
+                    bool sucess=replaceOrder(orderID,dQuantity,Price);
+                }
+            }
+            else if(goodsName==std::string("gold"))
+            {
+                func(std::string("You cannot trade gold with gold!!!!:"));
+            }
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+
+void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func)
+{
+    try
+    {
+        if(HasGoods(GoodsName))
+        {
+            ListPriceBook(func,GoodsName);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,std::function<void(std::string)> func)
+{
+    if(IsEmployee(PCId))
+    {
+        if(EmployeeToAdd)
+        {
+            if(!IsAdmin(PCId))
+            {
+                func("Need to be admin to add an employee.");
+            }
+        }
+        m_client->AddAccount(PlayerName,PCIdToAdd,EmployeeToAdd);
+    }
+}
+
+void RessourcesManager::Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func)
+{
+    if(IsEmployee(PCId))
+    {
+        try
+        {
+            AddGoods(func,GoodsName,GoodsDescription);
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+
+void RessourcesManager::Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func)
+{
+    if(IsAdmin(PCId))
+    {
+        DeleteAccount(PCIdToDelete,func);
+    }
+}
+
+void RessourcesManager::DeleteAccount(int PCId,std::function<void(std::string)> func)
+{
+    try
+    {
+        int PlayerId;
+        std::string name;
+        std::string PlayerName;
+        int permission_level=0;
+        m_client->GetPCInformation(PCId,PlayerId,name,PlayerName);
+        if(HasAccount(PCId))
+        {
+            DeleteAccount(PCId);
+        }
+        else
+        {
+            func(std::string("No Account found: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+name+std::string(" PlayerName=")+PlayerName);
+        }
+        func(std::string("Delete sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+name+std::string(" PlayerName=")+PlayerName);
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+void RessourcesManager::on_reject(const orderentry::OrderPtr& order, const char* reason)
+{
+    std::cout<<"rejected"<<std::endl;
+}
+
+void RessourcesManager::on_cancel(const orderentry::OrderPtr& order)
+{
+    std::cout<<"cancel"<<std::endl;
+}
+
+void RessourcesManager::on_cancel_reject(const orderentry::OrderPtr& order, const char* reason)
+{
+    std::cout<<"cancel reject"<<std::endl;
+}
+
+void RessourcesManager::on_replace(const orderentry::OrderPtr& order,const int32_t& size_delta,liquibook::book::Price new_price)
+{
+    std::cout<<"replace"<<std::endl;
+}
+
+void RessourcesManager::on_replace_reject(const orderentry::OrderPtr& order, const char* reason)
+{
+    std::cout<<"replace reject"<<std::endl;
+}
+

@@ -1,7 +1,7 @@
 #include "SinfarClient.h"
 #include <boost/algorithm/string.hpp> 
 
-SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):m_ressourceManager(ressourceManager)
+inline SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):m_ressourceManager(ressourceManager)
 {
     char path_temp[]="/tmp/SinfarXXXXXXXXXXXXXXXXXXXX";
     std::string m_temp_dir=std::string(mkdtemp(path_temp));
@@ -10,12 +10,12 @@ SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):
 }
 
 
-SinfarClient::~SinfarClient()
+inline SinfarClient::~SinfarClient()
 {
     Logout();
 }
 
-void SinfarClient::Login()
+inline void SinfarClient::Login()
 {
     curlpp::Easy handle;
     std::string url=std::string("https://nwn.sinfar.net/login.php?nocache=")+std::to_string(std::time(0));
@@ -37,7 +37,7 @@ void SinfarClient::Login()
     }
 }
 
-void SinfarClient::Logout()
+inline void SinfarClient::Logout()
 {
     curlpp::Easy handle;
     std::string url=std::string("https://nwn.sinfar.net/logout.php?nocache=")+std::to_string(std::time(0));
@@ -55,7 +55,7 @@ void SinfarClient::Logout()
     }   
 }
 
-void SinfarClient::DoLoop()
+inline void SinfarClient::DoLoop()
 {
     std::string messages_raw=PollMessage();
     if(messages_raw.length()>0)
@@ -84,7 +84,7 @@ void SinfarClient::DoLoop()
     }
 }
 
-std::string SinfarClient::PollMessage()
+inline std::string SinfarClient::PollMessage()
 {
     curlpp::Easy handle;
     std::string url=std::string("https://nwn.sinfar.net/getchat.php?nocache=")+std::to_string(std::time(0));
@@ -96,8 +96,12 @@ std::string SinfarClient::PollMessage()
     return str;
 }
 
-void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string PlayerName,std::string Message)
+inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string PlayerName,std::string Message)
 {
+    std::function<void(std::string)> func=[this,PlayerName](std::string message)
+    {
+        SendMessage(PlayerName,message);
+    };
     if(m_ressourceManager->HasAccount(PCId))
     {
         {
@@ -107,10 +111,6 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
             boost::algorithm::to_lower(command);
             if(command==std::string("lg") || command==std::string("listgoods"))
             {
-                std::function<void(std::string)> func=[this,PlayerName](std::string message)
-                {
-                    SendMessage(PlayerName,message);
-                };
                 try
                 {
                     m_ressourceManager->ListGoods(func);
@@ -138,32 +138,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     boost::algorithm::to_lower(GoodsName);
                     int Quantity;
                     stream>>Quantity;
-                    if(Quantity>0&&PCIdTo>0 && m_ressourceManager->IsEmployee(PCId))
-                    {
-                        if(m_ressourceManager->HasGoods(GoodsName))
-                        {
-                            std::function<void(std::string)> func=[this,PlayerName](std::string message)
-                            {
-                                SendMessage(PlayerName,message);
-                            };
-                            try
-                            {
-                                m_ressourceManager->AddInventory(func,PCIdTo,GoodsName,Quantity);
-                            }
-                            catch(const std::exception& ex)
-                            {
-                                SendMessage(PlayerName,ex.what());
-                            }
-                            catch (const std::string& ex)
-                            {
-                                SendMessage(PlayerName,ex);
-                            }
-                        }
-                        else
-                        {
-                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
-                        }
-                    }
+                    m_ressourceManager->Command_InventoryAdd(PCId,PCIdTo,GoodsName,Quantity,func);
                 }
                 else if(subcommand==std::string("remove") || subcommand==std::string("r"))
                 {
@@ -174,64 +149,13 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     boost::algorithm::to_lower(GoodsName);
                     int Quantity;
                     stream>>Quantity;
-                    if(Quantity>0&&PCIdTo>0 && m_ressourceManager->IsEmployee(PCId))
-                    {
-                        if(m_ressourceManager->HasGoods(GoodsName))
-                        {
-                            std::function<void(std::string)> func=[this,PlayerName](std::string message)
-                            {
-                                SendMessage(PlayerName,message);
-                            };
-                            try
-                            {
-                            m_ressourceManager->RemoveInventory(func,PCIdTo,GoodsName,Quantity);
-                            }
-                            catch(const std::exception& ex)
-                            {
-                                SendMessage(PlayerName,ex.what());
-                            }
-                            catch (const std::string& ex)
-                            {
-                                SendMessage(PlayerName,ex);
-                            }
-                        }
-                        else
-                        {
-                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
-                        }
-                    }
+                    m_ressourceManager->Command_InventoryRemove(PCId,PCIdTo,GoodsName,Quantity,func);
                 }
                 else if(subcommand==std::string("list") || subcommand==std::string("l"))
                 {
                     int PCIdTo=-1;
                     stream>>PCIdTo;
-                    if(PCIdTo==-1)
-                    {
-                        PCIdTo=PCId;
-                    }
-                    else if(!m_ressourceManager->IsEmployee(PCId))
-                    {
-                        return;
-                    }
-                    if(PCIdTo>0)
-                    {
-                        std::function<void(std::string)> func=[&PlayerName,this](std::string message)
-                        {
-                            SendMessage(PlayerName,message);
-                        };
-                        try
-                        {
-                            m_ressourceManager->ListInventory(func,PCIdTo);
-                        }
-                        catch(const std::exception& ex)
-                        {
-                            SendMessage(PlayerName,ex.what());
-                        }
-                        catch (const std::string& ex)
-                        {
-                            SendMessage(PlayerName,ex);
-                        }
-                    }
+                    m_ressourceManager->Command_ListInventory(PCId,PCIdTo,func);
                 }
             }
             else if(command==std::string("trade") || command==std::string("t"))
@@ -248,44 +172,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     stream>>Quantity;
                     int Price;
                     stream>>Price;
-                    if(Quantity>0&&Price>0)
-                    {
-                        try
-                        {
-                        if(m_ressourceManager->HasGoods(GoodsName))
-                        {
-                            int goldAvailable=m_ressourceManager->GetInventory(PCId,"gold");
-                            if(goldAvailable>=Price*Quantity)
-                            {
-                                int idOrder=m_ressourceManager->addOrder(PCId,"BUY",GoodsName,Quantity,Price);
-                                if(idOrder>=0)
-                                {
-                                    std::function<void(std::string)> func=[&PlayerName,this](std::string message)
-                                    {
-                                    };
-                                    m_ressourceManager->RemoveInventory(func,PCId,"gold",Price*Quantity);
-                                    SendMessage(PlayerName,std::string("Buy Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
-                                }
-                            }
-                            else
-                            {
-                                SendMessage(PlayerName,std::string("You do not have enought gold: ")+GoodsName);
-                            }
-                        }
-                        else
-                        {
-                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
-                        }
-                        }
-                        catch(const std::exception& ex)
-                        {
-                            SendMessage(PlayerName,ex.what());
-                        }
-                        catch (const std::string& ex)
-                        {
-                            SendMessage(PlayerName,ex);
-                        }
-                    }
+                    m_ressourceManager->Command_TradeBuy(PCId,GoodsName,Quantity,Price,func);
                 }
                 else if(subcommand==std::string("sell") || subcommand==std::string("s"))
                 {
@@ -296,44 +183,38 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                     stream>>Quantity;
                     int Price;
                     stream>>Price;
-                    if(Quantity>0&&Price>0)
+                    m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
+                }
+                if(subcommand==std::string("replace") || subcommand==std::string("r"))
+                {
+                    std::string subsubcommand;
+                    stream>>subsubcommand;
+                    int orderID;
+                    stream>>orderID;
+                    int dQuantity;
+                    stream>>dQuantity;
+                    int Price;
+                    stream>>Price;
+                    m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
+                }
+                else if(subcommand==std::string("debuglist") || subcommand==std::string("dl"))
+                {
+                    std::function<void(std::string)> func=[&PlayerName,this](std::string message)
                     {
-                        try
-                        {
-                        if(m_ressourceManager->HasGoods(GoodsName))
-                        {
-                            int goodsAvailable=m_ressourceManager->GetInventory(PCId,GoodsName);
-                            if(goodsAvailable>=Quantity)
-                            {
-                                int idOrder=m_ressourceManager->addOrder(PCId,"SELL",GoodsName,Quantity,Price);
-                                if(idOrder>=0)
-                                {
-                                    std::function<void(std::string)> func=[&PlayerName,this](std::string message)
-                                    {
-                                    };
-                                    m_ressourceManager->RemoveInventory(func,PCId,GoodsName,Quantity);
-                                    SendMessage(PlayerName,std::string("Sell Order submitted for Goods=")+GoodsName+std::string(" Quantity=")+std::to_string(Quantity)+std::string(" Price=")+std::to_string(Price)+std::string(" orderID=")+std::to_string(idOrder));
-                                }
-                            }
-                            else
-                            {
-                                SendMessage(PlayerName,std::string("You do not have enought Goods: ")+GoodsName);
-                            }
-                        }
-                        else
-                        {
-                            SendMessage(PlayerName,std::string("GoodsName non existant: ")+GoodsName);
-                        }
-                        }
-                        catch(const std::exception& ex)
-                        {
-                            SendMessage(PlayerName,ex.what());
-                        }
-                        catch (const std::string& ex)
-                        {
-                            SendMessage(PlayerName,ex);
-                        }
-                    }
+                        SendMessage(PlayerName,message);
+                    };
+                    m_ressourceManager->DebugListMarket(func);
+                }
+                else if(subcommand==std::string("list") || subcommand==std::string("l"))
+                {
+                    m_ressourceManager->ListOrderMarket(func,PCId);
+                }
+                else if(subcommand==std::string("price") || subcommand==std::string("p"))
+                {
+                    std::string GoodsName;
+                    stream>>GoodsName;
+                    boost::algorithm::to_lower(GoodsName);
+                    m_ressourceManager->Command_TradeListPrice(GoodsName,func);
                 }
             }
         }
@@ -360,7 +241,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                             EmployeeToAdd=true;
                         }
                     }
-                    AddAccount(PlayerName,PCIdToAdd,EmployeeToAdd);
+                    m_ressourceManager->Command_AddAccount(PlayerName,PCId,PCIdToAdd,EmployeeToAdd,func);
                 }
             }
             else if(command==std::string("n") || command==std::string("new"))
@@ -370,22 +251,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 boost::algorithm::to_lower(GoodsName);
                 std::string GoodsDescription;
                 std::getline(stream,GoodsDescription);
-                std::function<void(std::string)> func=[&PlayerName,this](std::string message)
-                {
-                    SendMessage(PlayerName,message);
-                };
-                try
-                {
-                    m_ressourceManager->AddGoods(func,GoodsName,GoodsDescription);
-                }
-                catch(const std::exception& ex)
-                {
-                    SendMessage(PlayerName,ex.what());
-                }
-                catch (const std::string& ex)
-                {
-                    SendMessage(PlayerName,ex);
-                }
+                m_ressourceManager->Command_NewGoods(PCId,GoodsName,GoodsDescription,func);
             }
         }
         if(m_ressourceManager->IsAdmin(PCId))
@@ -400,7 +266,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
                 stream>>PCIdToDelete;
                 if(PCIdToDelete>0)
                 {
-                    DeleteAccount(PlayerName,PCIdToDelete);
+                    m_ressourceManager->Command_DeleteAccount(PCId,PCIdToDelete,func);
                 }
             }
             else
@@ -420,7 +286,7 @@ void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string 
     }
 }
 
-void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
+inline void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
 {
     try
     {
@@ -445,7 +311,7 @@ void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
     }
 }
 
-void SinfarClient::DeleteAccount(std::string DeleterName,int PCId)
+inline void SinfarClient::DeleteAccount(std::string DeleterName,int PCId)
 {
     try
     {
@@ -474,7 +340,7 @@ void SinfarClient::DeleteAccount(std::string DeleterName,int PCId)
     }
 }
 
-void SinfarClient::SendMessage(std::string PlayerName,std::string Message)
+inline void SinfarClient::SendMessage(std::string PlayerName,std::string Message) const
 {
     curlpp::Easy handle;
     std::string url=std::string("https://nwn.sinfar.net/sendchat.php?nocache=")+std::to_string(std::time(0));
@@ -497,12 +363,12 @@ void SinfarClient::SendMessage(std::string PlayerName,std::string Message)
     }
 }
 
-int SinfarClient::SelfPlayerID() const
+inline int SinfarClient::SelfPlayerID() const
 {
     return 46191;
 }
 
-void SinfarClient::GetPCInformation(int PCId,int& PlayerId,std::string& name,std::string& PlayerName)
+inline void SinfarClient::GetPCInformation(int PCId,int& PlayerId,std::string& name,std::string& PlayerName) const
 {
     curlpp::Easy handle;
     std::string url=std::string("https://nwn.sinfar.net/getonlineplayers.php?nocache=")+std::to_string(std::time(0));
@@ -529,5 +395,26 @@ void SinfarClient::GetPCInformation(int PCId,int& PlayerId,std::string& name,std
                 PlayerName=current_player["playerName"];
             }
         }
+    }
+}
+
+inline std::function<void(std::string)> SinfarClient::GetMessager(int PCId) const
+{
+    if(m_messager.count(PCId)>0)
+    {
+        return m_messager.at(PCId);
+    }
+    else
+    {
+        int PlayerId;
+        std::string name;
+        std::string PlayerName;
+        GetPCInformation(PCId,PlayerId,name,PlayerName);
+        std::function<void(std::string)> func=[PlayerName,this](std::string message)
+        {
+            SendMessage(PlayerName,message);
+        };
+        m_messager[PCId]=func;
+        return func;
     }
 }

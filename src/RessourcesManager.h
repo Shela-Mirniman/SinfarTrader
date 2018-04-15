@@ -4,18 +4,21 @@
 #include <memory>
 #include <functional>
 #include "Market.h"
+#include <boost/algorithm/string/replace.hpp>
+
+class SinfarClient;
 
 class RessourcesManager
 {
     std::shared_ptr<Database> m_database;
     std::shared_ptr<orderentry::Market> m_market;
+    std::shared_ptr<SinfarClient> m_client;
 public:
     RessourcesManager(std::shared_ptr<Database> database);
     void AddMarket(std::shared_ptr<orderentry::Market> market);
+    void AddClient(std::shared_ptr<SinfarClient> sinfarClient);
     ~RessourcesManager();
     void ListInventory(std::function<void(std::string)> func,int PCId);
-    void AddGoodsToSell(int PCId,std::string GoodsName,int orderID,int Quantity,int price);
-    void AddGoodsToBuy(int PCId,std::string GoodsName,int orderID,int Quantity,int price);
     int GetInventory(int PCId,std::string GoodsName);
     bool HasInventory(int PCId,std::string GoodsName);
     void AddInventory(std::function<void(std::string)> func,int PCId,std::string GoodsName,int quantity);
@@ -31,7 +34,39 @@ public:
     void UpdateMarket();
     bool OrderExists(std::string orderID);
     int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    bool replaceOrder(int orderID,int dquantity,int newprice);
+    void UpdateOrderSeed(int orderSeed);
+    void DebugListMarket(std::function<void(std::string)> func);
+    void ListOrderMarket(std::function<void(std::string)> func,int PCId);
+    void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
+    void OrderInfo(std::string orderID,int& price,int& quantity,std::string& goodsName,bool& isBuy);
+    void Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func);
+    void Command_InventoryRemove(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func);
+    void Command_ListInventory(int PCId,int PCIdTo,std::function<void(std::string)> func);
+    void Command_TradeBuy(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func);
+    void Command_TradeSell(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func);
+    void Command_Replace(int PCId,int orderID,int dQuantity,int Price,std::function<void(std::string)> func);
+    void Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func);
+    void Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,std::function<void(std::string)> func);
+    void Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func);
+    void Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func);
+                               
+    void DeleteAccount(int PCId,std::function<void(std::string)> func);
+    
     void on_accept(const orderentry::OrderPtr& order);
     void on_fill(const orderentry::OrderPtr& order,const orderentry::OrderPtr& matched_order,liquibook::book::Quantity fill_qty,liquibook::book::Cost fill_cost);
-    void UpdateOrderSeed(int orderSeed);
+    void on_reject(const orderentry::OrderPtr& order, const char* reason);
+    void on_cancel(const orderentry::OrderPtr& order);
+    void on_cancel_reject(const orderentry::OrderPtr& order, const char* reason);
+    void on_replace(const orderentry::OrderPtr& order,const int32_t& size_delta,liquibook::book::Price new_price);
+    void on_replace_reject(const orderentry::OrderPtr& order, const char* reason);
 };
+
+inline std::string Escape(std::string in)
+{
+    boost::replace_all(in, "\"", "\"\"");
+    boost::replace_all(in, "\'", "\'\'");
+    return in;
+}
+
+#include "SinfarClient.h"
