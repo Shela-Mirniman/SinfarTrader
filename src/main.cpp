@@ -26,7 +26,6 @@ int main(int argc, char *argv[])
     std::shared_ptr<RessourcesManager> ressource(std::make_shared<RessourcesManager>(database));
     std::shared_ptr<orderentry::Market> market(std::make_shared<orderentry::Market>(ressource));
     ressource->AddMarket(market);
-    ressource->UpdateMarket();
     
     Pistache::Port port(9080);
 
@@ -37,6 +36,8 @@ int main(int argc, char *argv[])
     MarketServer server(addr,thr);
     std::shared_ptr<SinfarClient> client(std::make_shared<SinfarClient>(ressource));
     ressource->AddClient(client);
+    
+    ressource->UpdateMarket();
     while(stopFlag == 0)
     {
         client->DoLoop();

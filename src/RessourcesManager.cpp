@@ -109,7 +109,7 @@ void RessourcesManager::RemoveInventory(std::function<void(std::string)> func,in
         if(HasInventory(PCIdTo,GoodsName))
         {
             Quantity=GetInventory(PCIdTo,GoodsName)-Quantity;
-            if(Quantity>0)
+            if(Quantity>=0)
             {
                 char *errorMessage;
                 std::string sql=std::string("UPDATE inventory set quantity=")+std::to_string(Quantity)+std::string(" where PCId=")+std::to_string(PCIdTo)+std::string(" and goodsName='")+GoodsName+std::string("'");
@@ -440,21 +440,28 @@ void RessourcesManager::on_accept(const orderentry::OrderPtr& order)
 
 void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderentry::OrderPtr& matched_order,liquibook::book::Quantity fill_qty,liquibook::book::Cost fill_cost)
 {
-    std::function<void(std::string)> func=[](std::string)
+    auto func=m_client->GetMessager(order->PCId());
+    auto func2=m_client->GetMessager(matched_order->PCId());
+    try
     {
-    };
     orderentry::OrderPtr orderBuy=order;
     orderentry::OrderPtr orderSell=matched_order;
     if(!orderBuy->is_buy() && orderSell->is_buy())
     {
         std::swap(orderBuy,orderSell);
     }
-    AddInventory(func,orderBuy->PCId(),orderBuy->symbol(),fill_qty);
-    if(fill_cost-orderBuy->price()*fill_qty>0)
+    auto funcBuy=m_client->GetMessager(orderBuy->PCId());
+    auto funcSell=m_client->GetMessager(orderSell->PCId());
+    funcBuy(std::string("Buy Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderBuy->symbol()+std::string(" for ")+std::to_string(fill_cost));
+    funcSell(std::string("Sell Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderSell->symbol()+std::string(" for ")+std::to_string(fill_cost));
+    AddFilled(orderBuy->PCId(),orderBuy->symbol(),true,fill_qty,fill_cost,funcBuy);
+    AddFilled(orderSell->PCId(),orderSell->symbol(),false,fill_qty,fill_cost,funcSell);
+    AddInventory(funcBuy,orderBuy->PCId(),orderBuy->symbol(),fill_qty);
+    if(orderBuy->price()*fill_qty-fill_cost>0)
     {
-        AddInventory(func,orderBuy->PCId(),"gold",fill_cost-orderBuy->price()*fill_qty);
+        AddInventory(funcBuy,orderBuy->PCId(),"gold",orderBuy->price()*fill_qty-fill_cost);
     }
-    AddInventory(func,orderSell->PCId(),"gold",fill_cost);
+    AddInventory(funcSell,orderSell->PCId(),"gold",fill_cost);
     char *errorMessage;
     std::string sql;
     if(order->quantityOnMarket()>0)
@@ -477,6 +484,17 @@ void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderent
     if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
     {
         throw std::runtime_error(errorMessage);
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+        func2(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+        func2(ex);
     }
 }
 
@@ -539,12 +557,20 @@ void RessourcesManager::OrderInfo(std::string orderID,int& price,int& quantity,s
     isBuy=order->is_buy();
 }
 
-bool RessourcesManager::replaceOrder(int orderID,int dquantity,int newprice)
+bool RessourcesManager::replaceOrder(int PCId,int orderID,int dquantity,int newprice,std::function<void(std::string)> func)
 {
     auto order=m_market->GetOrder(std::to_string(orderID));
-    std::string goodsName=order->symbol();
-    auto book=m_market->findBook(goodsName);
-    bool sucess=book->replace(order,dquantity,newprice);
+    if(order->PCId()==PCId)
+    {
+        std::string goodsName=order->symbol();
+        auto book=m_market->findBook(goodsName);
+        bool sucess=book->replace(order,dquantity,newprice);
+        return sucess;
+    }
+    else
+    {
+        func("Cannot replace an order which is not yours.");
+    }
 }
 
 void RessourcesManager::Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func)
@@ -721,7 +747,7 @@ void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int P
                     int priceChange;
                     int quantityChange;
                     int totalPriceChange;
-                    bool sucess=replaceOrder(orderID,dQuantity,Price);
+                    bool sucess=replaceOrder(PCId,orderID,dQuantity,Price,func);
                 }
             }
             else if(!isBuy&&HasGoods(goodsName)&& goodsName!=std::string("gold"))
@@ -732,7 +758,7 @@ void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int P
                     int priceChange;
                     int quantityChange;
                     int totalPriceChange;
-                    bool sucess=replaceOrder(orderID,dQuantity,Price);
+                    bool sucess=replaceOrder(PCId,orderID,dQuantity,Price,func);
                 }
             }
             else if(goodsName==std::string("gold"))
@@ -751,6 +777,21 @@ void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int P
     }
 }
 
+void RessourcesManager::Command_Cancel(int PCId,int orderID, std::function<void(std::string)> func)
+{
+    auto order=m_market->GetOrder(std::to_string(orderID));
+    if(order->PCId()==PCId)
+    {
+        std::string goodsName=order->symbol();
+        auto book=m_market->findBook(goodsName);
+        book->cancel(order);
+    }
+    else
+    {
+        func("You cannot cancel an order which is not yours");
+    }
+}
+
 void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func)
 {
     try
@@ -759,6 +800,42 @@ void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::functi
         {
             ListPriceBook(func,GoodsName);
         }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+void RessourcesManager::Command_TradeHistory(int PCId,std::function<void(std::string)> func)
+{
+    try
+    {
+        std::string message("Trading History:\n");
+        auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+        {
+            if(nbcolumn==6)
+            {
+                std::string type_order("Sell");
+                if(std::stoi(columnText[2]))
+                {
+                    type_order=std::string("Buy");
+                }
+                *static_cast<std::string*>(data)+=type_order + std::string(" ")+std::string(columnText[1])+std::string(" ")+std::string(columnText[3])+std::string(" at ")+std::string(columnText[4])+std::string(" gp ")+std::string(columnText[5])+std::string(" \n");
+            }
+            return 0;
+        };
+        char *errorMessage;
+        std::string sql=std::string("SELECT * FROM filled_history where PCId=")+std::to_string(PCId)+std::string(" Order By date DESC LIMIT 10");
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+        func(message);
     }
     catch(const std::exception& ex)
     {
@@ -843,26 +920,123 @@ void RessourcesManager::DeleteAccount(int PCId,std::function<void(std::string)> 
 
 void RessourcesManager::on_reject(const orderentry::OrderPtr& order, const char* reason)
 {
-    std::cout<<"rejected"<<std::endl;
+    int PCId=order->PCId();
+    auto func=m_client->GetMessager(PCId);
+    func(std::string("Order rejected: ")+std::string(reason));
 }
 
 void RessourcesManager::on_cancel(const orderentry::OrderPtr& order)
 {
-    std::cout<<"cancel"<<std::endl;
+    int PCId=order->PCId();
+    auto func=m_client->GetMessager(PCId);
+    try
+    {
+    if(order->is_buy())
+    {
+        AddInventory(func,PCId,"gold",order->price()*order->order_qty());
+    }
+    else
+    {
+        AddInventory(func,PCId,order->symbol(),order->order_qty());
+    }
+    
+    char *errorMessage;
+    std::string sql=std::string("DELETE from market where orderID=")+order->order_id();
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+    func(std::string("Order canceled."));
 }
 
 void RessourcesManager::on_cancel_reject(const orderentry::OrderPtr& order, const char* reason)
 {
-    std::cout<<"cancel reject"<<std::endl;
+    int PCId=order->PCId();
+    auto func=m_client->GetMessager(PCId);
+    func(std::string("Cancelling rejected: ")+std::string(reason));
 }
 
 void RessourcesManager::on_replace(const orderentry::OrderPtr& order,const int32_t& size_delta,liquibook::book::Price new_price)
 {
-    std::cout<<"replace"<<std::endl;
+    int PCId=order->PCId();
+    auto func=m_client->GetMessager(PCId);
+    try
+    {
+    char *errorMessage;
+    std::string sql=std::string("UPDATE market set quantity=")+std::to_string(order->quantityOnMarket())+std::string(", price=")+std::to_string(new_price)+ std::string(" where orderID=")+order->order_id();
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    if(order->is_buy())
+    {
+        int dgold=(order->quantityOnMarket()-size_delta)*order->price()-(order->quantityOnMarket())*new_price;
+        if(dgold>0)
+        {
+            AddInventory(func,PCId,"gold",dgold);
+        }
+        else if(dgold<0)
+        {
+            RemoveInventory(func,PCId,"gold",-dgold);
+        }
+    }
+    else
+    {
+        if(size_delta>0)
+        {
+            RemoveInventory(func,PCId,order->symbol(),size_delta);
+        }
+        else if(size_delta<0)
+        {
+            AddInventory(func,PCId,order->symbol(),-size_delta);
+        }
+    }
+    func(std::string("Order replaced."));
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+    
 }
 
 void RessourcesManager::on_replace_reject(const orderentry::OrderPtr& order, const char* reason)
 {
-    std::cout<<"replace reject"<<std::endl;
+    int PCId=order->PCId();
+    auto func=m_client->GetMessager(PCId);
+    func(std::string("Replacement rejected: ")+std::string(reason));
 }
 
+void RessourcesManager::AddFilled(int PCId,std::string GoodsName,bool isBuy,int Quantity,int FilledPrice,std::function<void(std::string)> func)
+{
+    try
+    {
+    char *errorMessage;
+    std::string sql=std::string("INSERT INTO filled_history VALUES(")+std::to_string(PCId)+std::string(",'")+GoodsName+std::string("',")+std::to_string(isBuy)+std::string(",")+std::to_string(Quantity)+std::string(",")+std::to_string(FilledPrice)+std::string(",datetime('now'))");
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}

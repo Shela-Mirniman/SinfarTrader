@@ -124,6 +124,21 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                     SendMessage(PlayerName,ex);
                 }
             }
+            else if(command==std::string("h") || command==std::string("help"))
+            {
+                std::string text(   "The following basic command are possible:\n"
+                                    "listgoods: List the goods that can be traded\n"
+                                    "help: Give this help message\n"
+                                    "inventory list: List all item in your inventory\n"
+                                    "trade buy <goodsname> <quantity> <price>: Add a buy order\n"
+                                    "trade sell <goodsname> <quantity> <price>: Add a sell order\n"
+                                    "trade replace <order id> <delta quantity> <new price>: Replace an order\n"
+                                    "trade cancel <order id>: Cancel an order\n"
+                                    "trade history: Show the history of your trading\n"
+                                    "trade list: List all pending order\n"
+                                    "trade price <goodsname>: List the price of current goods on market\n");
+                SendMessage(PlayerName,text);
+            }
             else if(command==std::string("inventory") || command==std::string("i"))
             {
                 std::string subcommand;
@@ -185,10 +200,8 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                     stream>>Price;
                     m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
                 }
-                if(subcommand==std::string("replace") || subcommand==std::string("r"))
+                else if(subcommand==std::string("replace") || subcommand==std::string("r"))
                 {
-                    std::string subsubcommand;
-                    stream>>subsubcommand;
                     int orderID;
                     stream>>orderID;
                     int dQuantity;
@@ -197,6 +210,17 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                     stream>>Price;
                     m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
                 }
+                else if(subcommand==std::string("cancel") || subcommand==std::string("c"))
+                {
+                    int orderID;
+                    stream>>orderID;
+                    m_ressourceManager->Command_Cancel(PCId,orderID,func);
+                }
+                else if(subcommand==std::string("history") || subcommand==std::string("h"))
+                {
+                    m_ressourceManager->Command_TradeHistory(PCId,func);
+                }
+                
                 else if(subcommand==std::string("debuglist") || subcommand==std::string("dl"))
                 {
                     std::function<void(std::string)> func=[&PlayerName,this](std::string message)
