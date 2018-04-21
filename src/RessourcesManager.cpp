@@ -20,7 +20,7 @@ void RessourcesManager::AddClient(std::shared_ptr<SinfarClient> client)
 
 void RessourcesManager::ListInventory(std::function<void(std::string)> func,int PCId)
 {
-    std::string message("Lists of Goods in Invetory:\n");
+    std::string message("Lists of Goods in Inventory:\n");
     auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
     {
         if(nbcolumn==2)
