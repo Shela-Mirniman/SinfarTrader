@@ -129,14 +129,14 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                 std::string text(   "The following basic command are possible:\n"
                                     "listgoods: List the goods that can be traded\n"
                                     "help: Give this help message\n"
-                                    "inventory list: List all item in your inventory\n"
-                                    "trade buy <goodsname> <quantity> <price>: Add a buy order\n"
-                                    "trade sell <goodsname> <quantity> <price>: Add a sell order\n"
-                                    "trade replace <order id> <delta quantity> <new price>: Replace an order\n"
-                                    "trade cancel <order id>: Cancel an order\n"
-                                    "trade history: Show the history of your trading\n"
-                                    "trade list: List all pending order\n"
-                                    "trade price <goodsname>: List the price of current goods on market\n");
+                                    "list_i: List all item in your inventory\n"
+                                    "buy <quantity> <goodsname> <price>: Add a buy order\n"
+                                    "sell <quantity> <goodsname> <price>: Add a sell order\n"
+                                    "replace <order id> <delta quantity> <new price>: Replace an order\n"
+                                    "cancel <order id>: Cancel an order\n"
+                                    "history: Show the history of your trading\n"
+                                    "list: List all pending order\n"
+                                    "price <goodsname>: List the price of current goods on market\n");
                 SendMessage(PlayerName,text);
             }
             else if(command==std::string("inventory") || command==std::string("i"))
@@ -173,73 +173,73 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                     m_ressourceManager->Command_ListInventory(PCId,PCIdTo,func);
                 }
             }
-            else if(command==std::string("trade") || command==std::string("t"))
+            else if(command==std::string("list_i") || command==std::string("li"))
             {
-                std::string subcommand;
-                stream>>subcommand;
-                boost::algorithm::to_lower(subcommand);
-                if(subcommand==std::string("buy") || subcommand==std::string("b"))
-                {
-                    std::string GoodsName;
-                    stream>>GoodsName;
-                    boost::algorithm::to_lower(GoodsName);
-                    int Quantity;
-                    stream>>Quantity;
-                    int Price;
-                    stream>>Price;
-                    m_ressourceManager->Command_TradeBuy(PCId,GoodsName,Quantity,Price,func);
-                }
-                else if(subcommand==std::string("sell") || subcommand==std::string("s"))
-                {
-                    std::string GoodsName;
-                    stream>>GoodsName;
-                    boost::algorithm::to_lower(GoodsName);
-                    int Quantity;
-                    stream>>Quantity;
-                    int Price;
-                    stream>>Price;
-                    m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
-                }
-                else if(subcommand==std::string("replace") || subcommand==std::string("r"))
-                {
-                    int orderID;
-                    stream>>orderID;
-                    int dQuantity;
-                    stream>>dQuantity;
-                    int Price;
-                    stream>>Price;
-                    m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
-                }
-                else if(subcommand==std::string("cancel") || subcommand==std::string("c"))
-                {
-                    int orderID;
-                    stream>>orderID;
-                    m_ressourceManager->Command_Cancel(PCId,orderID,func);
-                }
-                else if(subcommand==std::string("history") || subcommand==std::string("h"))
-                {
-                    m_ressourceManager->Command_TradeHistory(PCId,func);
-                }
+                int PCIdTo=-1;
+                stream>>PCIdTo;
+                m_ressourceManager->Command_ListInventory(PCId,PCIdTo,func);
+            }
+            else if(command==std::string("buy") || command==std::string("b"))
+            {
+                int Quantity;
+                stream>>Quantity;
+                std::string GoodsName;
+                boost::algorithm::to_lower(GoodsName);
+                stream>>GoodsName;
+                int Price;
+                stream>>Price;
+                m_ressourceManager->Command_TradeBuy(PCId,GoodsName,Quantity,Price,func);
+            }
+            else if(command==std::string("sell") || command==std::string("s"))
+            {
+                int Quantity;
+                stream>>Quantity;
+                std::string GoodsName;
+                stream>>GoodsName;
+                boost::algorithm::to_lower(GoodsName);
+                int Price;
+                stream>>Price;
+                m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
+            }
+            else if(command==std::string("replace") || command==std::string("r"))
+            {
+                int orderID;
+                stream>>orderID;
+                int dQuantity;
+                stream>>dQuantity;
+                int Price;
+                stream>>Price;
+                m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
+            }
+            else if(command==std::string("cancel") || command==std::string("c"))
+            {
+                int orderID;
+                stream>>orderID;
+                m_ressourceManager->Command_Cancel(PCId,orderID,func);
+            }
+            else if(command==std::string("history") || command==std::string("h"))
+            {
+                m_ressourceManager->Command_TradeHistory(PCId,func);
+            }
                 
-                else if(subcommand==std::string("debuglist") || subcommand==std::string("dl"))
+                /*else if(subcommand==std::string("debuglist") || subcommand==std::string("dl"))
                 {
                     std::function<void(std::string)> func=[&PlayerName,this](std::string message)
                     {
                         SendMessage(PlayerName,message);
                     };
                     m_ressourceManager->DebugListMarket(func);
-                }
-                else if(subcommand==std::string("list") || subcommand==std::string("l"))
-                {
-                    m_ressourceManager->ListOrderMarket(func,PCId);
-                }
-                else if(subcommand==std::string("price") || subcommand==std::string("p"))
-                {
-                    std::string GoodsName;
-                    stream>>GoodsName;
-                    boost::algorithm::to_lower(GoodsName);
-                    m_ressourceManager->Command_TradeListPrice(GoodsName,func);
-                }
+                }*/
+            else if(command==std::string("list") || command==std::string("l"))
+            {
+                m_ressourceManager->ListOrderMarket(func,PCId);
+            }
+            else if(command==std::string("price") || command==std::string("p"))
+            {
+                std::string GoodsName;
+                stream>>GoodsName;
+                boost::algorithm::to_lower(GoodsName);
+                m_ressourceManager->Command_TradeListPrice(GoodsName,func);
             }
         }
         
