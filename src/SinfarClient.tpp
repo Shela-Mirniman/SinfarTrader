@@ -98,6 +98,7 @@ inline std::string SinfarClient::PollMessage()
 
 inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::string PlayerName,std::string Message)
 {
+    std::cout<<"Parsing PCId="<<PCId<<" PlayerId="<<PlayerId<<" Name="<<name<<" PlayerName="<<PlayerName<<" Message="<<Message<<std::endl;
     std::function<void(std::string)> func=[this,PlayerName](std::string message)
     {
         SendMessage(PlayerName,message);
