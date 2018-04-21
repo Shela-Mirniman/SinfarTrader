@@ -390,7 +390,7 @@ inline void SinfarClient::SendMessage(std::string PlayerName,std::string Message
 
 inline int SinfarClient::SelfPlayerID() const
 {
-    return 46191;
+    return 46459;
 }
 
 inline void SinfarClient::GetPCInformation(int PCId,int& PlayerId,std::string& name,std::string& PlayerName) const
