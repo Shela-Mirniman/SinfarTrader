@@ -22,7 +22,7 @@ inline void SinfarClient::Login()
     handle.setOpt(curlpp::Options::Url(url));
     handle.setOpt(curlpp::Options::CookieJar(m_path.c_str()));
     curlpp::Forms form;
-    form.push_back(new curlpp::FormParts::Content("player_name", "bot_trader"));
+    form.push_back(new curlpp::FormParts::Content("player_name", "bot"));
     form.push_back(new curlpp::FormParts::Content("password", "IcDarkUttOdTew6"));
     handle.setOpt(curlpp::Options::HttpPost(form));
     std::ostringstream os;
