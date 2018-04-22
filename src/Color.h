@@ -8,9 +8,9 @@ inline int ToPrintableASCII(int value)
     {
 	return 32;
     }
-    else if(value>254)
+    else if(value>127)
     {
-	return 254;
+	return 127;
     }
     return value;
 }
