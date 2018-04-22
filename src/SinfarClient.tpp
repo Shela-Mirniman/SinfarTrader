@@ -140,6 +140,7 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                                 +ColorRed("history")+std::string(": Show the history of your trading\n")
                                 +ColorRed("list")+std::string(": List all pending order\n")
                                 +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market\n");
+                std::cout<<"message "<<text<<std::endl;
                 SendMessage(PlayerName,text);
             }
             else if(command==std::string("info") || command==std::string("in"))
