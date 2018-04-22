@@ -130,6 +130,7 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                 std::string text(   "The following basic command are possible:\n"
                                     "listgoods: List the goods that can be traded\n"
                                     "help: Give this help message\n"
+                                    "info: Give details on your profile\n"
                                     "list_i: List all item in your inventory\n"
                                     "buy <quantity> <goodsname> <price>: Add a buy order\n"
                                     "sell <quantity> <goodsname> <price>: Add a sell order\n"
@@ -197,28 +198,28 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
             }
             else if(command==std::string("sell") || command==std::string("s"))
             {
-                int Quantity;
+                int Quantity=0;
                 stream>>Quantity;
                 std::string GoodsName;
                 stream>>GoodsName;
                 boost::algorithm::to_lower(GoodsName);
-                int Price;
+                int Price=0;
                 stream>>Price;
                 m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
             }
             else if(command==std::string("replace") || command==std::string("r"))
             {
-                int orderID;
+                int orderID=0;
                 stream>>orderID;
-                int dQuantity;
+                int dQuantity=0;
                 stream>>dQuantity;
-                int Price;
+                int Price=0;
                 stream>>Price;
                 m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
             }
             else if(command==std::string("cancel") || command==std::string("c"))
             {
-                int orderID;
+                int orderID=0;
                 stream>>orderID;
                 m_ressourceManager->Command_Cancel(PCId,orderID,func);
             }
