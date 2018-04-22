@@ -230,7 +230,7 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         if(HasAccount(PCId))
         {
             char *errorMessage;
-            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" , PlayerName='")+PlayerName+std::string("' , name='")+Escape(name)+std::string("' , permission_level=")+std::to_string(permission_level)+("' , fee=")+std::to_string(fee)+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
+            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" , PlayerName='")+PlayerName+std::string("' , name='")+Escape(name)+std::string("' , permission_level=")+std::to_string(permission_level)+(", fee=")+std::to_string(fee)+std::string(" where PCId=")+std::to_string(PCId);
             std::cout<<"sql "<<sql<<std::endl;
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
