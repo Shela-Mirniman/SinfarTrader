@@ -14,7 +14,7 @@ Order::Order(const std::string & id,int PCId,
     liquibook::book::Price price,
     liquibook::book::Price stopPrice,
     bool aon,
-    bool ioc)
+    bool ioc,int fee)
     : id_(id)
     , buy_side_(buy_side)
     , symbol_(symbol)
@@ -26,7 +26,7 @@ Order::Order(const std::string & id,int PCId,
     , quantityFilled_(0)
     , quantityOnMarket_(0)
     , fillCost_(0)
-    , verbose_(false),PCId_(PCId)
+    , verbose_(false),PCId_(PCId),fee_(fee)
 
 {
 }
@@ -41,6 +41,12 @@ int
 Order::PCId() const
 {
     return PCId_;
+}
+
+int
+Order::fee() const
+{
+    return fee_;
 }
 
 bool 

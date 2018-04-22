@@ -29,13 +29,13 @@ public:
     bool HasGoods(std::string Goodsname);
     void AddGoods(std::function<void(std::string)> func,std::string Goodsname,std::string GoodsDescription);
     bool HasAccount(int PCId);
-    void AddAccount(std::function<void(std::string)> func,int PCId,bool Employee,int PlayerId,std::string name,std::string PlayerName);
+    void AddAccount(std::function<void(std::string)> func,int PCId,bool Employee,int PlayerId,std::string name,std::string PlayerName,int fee);
     void DeleteAccount(int PCId);
     bool IsEmployee(int PCId);
     bool IsAdmin(int PCId);
     void UpdateMarket();
     bool OrderExists(std::string orderID);
-    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice=0,bool aon=false,bool ioc=false);
     bool replaceOrder(int PCId,int orderID,int dquantity,int newprice,std::function<void(std::string)> func);
     void UpdateOrderSeed(int orderSeed);
     void DebugListMarket(std::function<void(std::string)> func);
@@ -49,12 +49,23 @@ public:
     void Command_TradeSell(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func);
     void Command_Replace(int PCId,int orderID,int dQuantity,int Price,std::function<void(std::string)> func);
     void Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func);
-    void Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,std::function<void(std::string)> func);
+    void Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,int fee,std::function<void(std::string)> func);
     void Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func);
     void Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func);
     void Command_Cancel(int PCId,int orderID, std::function<void(std::string)> func);
-    
+    void Command_Info(int PCId,std::function<void(std::string)> func);
     void Command_TradeHistory(int PCId,std::function<void(std::string)> func);
+    
+    void Command_shopAdd(int PCId,int quantity,std::function<void(std::string)> func);
+    void Command_shopRemove(int PCId,int quantity,std::function<void(std::string)> func);
+    void Command_shopInfo(int PCId,std::function<void(std::string)> func);
+    
+    void shopAdd(int quantity,std::function<void(std::string)> func);
+    void shopRemove(int quantity,std::function<void(std::string)> func);
+    void shopInfo(std::function<void(std::string)> func);
+    
+    int shopGet(std::function<void(std::string)> func);
+    int GetFee(int PCId);
                                
     void DeleteAccount(int PCId,std::function<void(std::string)> func);
     

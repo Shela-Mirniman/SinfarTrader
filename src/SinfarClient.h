@@ -26,7 +26,7 @@ public:
     ~SinfarClient();
     void DoLoop();
     void SendMessage(std::string PlayerName,std::string Message) const;
-    void AddAccount(std::string AdderName,int PCId,bool Employee);
+    void AddAccount(std::string AdderName,int PCId,int fee,bool Employee);
     void DeleteAccount(std::string DeleterName,int PCId);
     void GetPCInformation(int PCId,int& PlayerId,std::string& name,std::string& PlayerName) const;
     std::function<void(std::string)> GetMessager(int PCId) const;

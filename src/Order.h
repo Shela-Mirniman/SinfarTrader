@@ -52,7 +52,7 @@ public:
         liquibook::book::Price price,
         liquibook::book::Price stopPrice,
         bool aon,
-        bool ioc);
+        bool ioc,int fee);
 
     //////////////////////////
     // Implement the 
@@ -89,6 +89,8 @@ public:
     std::string order_id() const;
     
     int PCId() const;
+    
+    int fee() const;
 
     uint32_t quantityFilled() const;
 
@@ -127,6 +129,7 @@ public:
 private:
     std::string id_;
     int PCId_;
+    int fee_;
     bool buy_side_;
     std::string symbol_;
     liquibook::book::Quantity quantity_;

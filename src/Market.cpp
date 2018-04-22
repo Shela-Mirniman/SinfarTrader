@@ -235,17 +235,17 @@ void Market::setOrderSeed(uint32_t orderIdSeed)
     orderIdSeed_=orderIdSeed;
 }
 
-int Market::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+int Market::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice,bool aon,bool ioc)
 {
     std::string orderId = std::to_string(++orderIdSeed_);
     m_ressourcesManager->UpdateOrderSeed(orderIdSeed_);
-    return addOrder(orderId,PCId,side,symbol,quantity,price,stopPrice,aon,ioc);
+    return addOrder(orderId,PCId,side,symbol,quantity,price,fee,stopPrice,aon,ioc);
 }
 
-int Market::addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+int Market::addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice,bool aon,bool ioc)
 {
     int iorderId=std::stoi(orderId);
-    OrderPtr order = std::make_shared<Order>(orderId,PCId, side == "BUY", quantity, symbol, price, stopPrice, aon, ioc);
+    OrderPtr order = std::make_shared<Order>(orderId,PCId, side == "BUY", quantity, symbol, price, stopPrice, aon, ioc,fee);
     const liquibook::book::OrderConditions AON(liquibook::book::oc_all_or_none);
     const liquibook::book::OrderConditions IOC(liquibook::book::oc_immediate_or_cancel);
     const liquibook::book::OrderConditions NOC(liquibook::book::oc_no_conditions);

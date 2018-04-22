@@ -140,6 +140,10 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                                     "price <goodsname>: List the price of current goods on market\n");
                 SendMessage(PlayerName,text);
             }
+            else if(command==std::string("info") || command==std::string("in"))
+            {
+                m_ressourceManager->Command_Info(PCId,func);
+            }
             else if(command==std::string("inventory") || command==std::string("i"))
             {
                 std::string subcommand;
@@ -257,6 +261,8 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                 stream>>PCIdToAdd;
                 if(PCIdToAdd>0)
                 {
+                    int fee=5;
+                    stream>>fee;
                     if(m_ressourceManager->IsAdmin(PCId))
                     {
                         std::string Employee;
@@ -266,7 +272,7 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                             EmployeeToAdd=true;
                         }
                     }
-                    m_ressourceManager->Command_AddAccount(PlayerName,PCId,PCIdToAdd,EmployeeToAdd,func);
+                    m_ressourceManager->Command_AddAccount(PlayerName,PCId,PCIdToAdd,EmployeeToAdd,fee,func);
                 }
             }
             else if(command==std::string("n") || command==std::string("new"))
@@ -294,8 +300,29 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                     m_ressourceManager->Command_DeleteAccount(PCId,PCIdToDelete,func);
                 }
             }
-            else
+            else if(command==std::string("shop"))
             {
+                std::string subcommand;
+                stream>>subcommand;
+                boost::algorithm::to_lower(subcommand);
+                if(subcommand==std::string("add") || subcommand==std::string("a"))
+                {
+                    int quantity=0;
+                    stream>>quantity;
+                    m_ressourceManager->Command_shopAdd(PCId,quantity,func);
+                }
+                else if(subcommand==std::string("remove") || subcommand==std::string("r"))
+                {
+                    int quantity=0;
+                    stream>>quantity;
+                    m_ressourceManager->Command_shopRemove(PCId,quantity,func);
+                }
+                else if(subcommand==std::string("info") || subcommand==std::string("i"))
+                {
+                    int quantity=0;
+                    stream>>quantity;
+                    m_ressourceManager->Command_shopInfo(PCId,func);
+                }
             }
         }
     }
@@ -311,7 +338,7 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
     }
 }
 
-inline void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employee)
+inline void SinfarClient::AddAccount(std::string AdderName,int PCId,int fee,bool Employee)
 {
     try
     {
@@ -324,7 +351,7 @@ inline void SinfarClient::AddAccount(std::string AdderName,int PCId,bool Employe
         {
             SendMessage(AdderName,message);
         };
-        m_ressourceManager->AddAccount(func, PCId, Employee, PlayerId, name, PlayerName);
+        m_ressourceManager->AddAccount(func, PCId, Employee, PlayerId, name, PlayerName,fee);
     }
     catch(const std::exception& ex)
     {

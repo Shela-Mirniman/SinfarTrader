@@ -45,8 +45,8 @@ public:
     ~Market();
     OrderBookPtr addBook(const std::string & symbol);
     bool symbolIsDefined(const std::string & symbol);
-    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
-    int addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice=0,bool aon=false,bool ioc=false);
+    int addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice=0,bool aon=false,bool ioc=false);
+    int addOrder(std::string orderId,int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice=0,bool aon=false,bool ioc=false);
     OrderBookPtr findBook(const std::string & symbol);
     
     /////////////////////////////////////

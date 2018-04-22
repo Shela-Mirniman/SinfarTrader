@@ -220,7 +220,7 @@ bool RessourcesManager::HasAccount(int PCId)
     return banswer;
 }
 
-void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCId,bool Employee,int PlayerId,std::string name,std::string PlayerName)
+void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCId,bool Employee,int PlayerId,std::string name,std::string PlayerName,int fee)
 {
         int permission_level=0;
         if(Employee)
@@ -230,7 +230,7 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         if(HasAccount(PCId))
         {
             char *errorMessage;
-            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" , PlayerName='")+PlayerName+std::string("' , name='")+Escape(name)+std::string("' , permission_level=")+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
+            std::string sql=std::string("UPDATE account set PlayerId=")+std::to_string(PlayerId)+std::string(" , PlayerName='")+PlayerName+std::string("' , name='")+Escape(name)+std::string("' , permission_level=")+std::to_string(permission_level)+("' , fee=")+std::to_string(fee)+std::to_string(permission_level)+std::string(" where PCId=")+std::to_string(PCId);
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
@@ -239,13 +239,13 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         else
         {
             char *errorMessage;
-            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+Escape(name)+std::string("',")       +std::to_string(permission_level)+std::string(")");
+            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+Escape(name)+std::string("',")       +std::to_string(permission_level)+std::to_string(fee)+std::string(")");
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
             }
         }
-        func(std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+Escape(name)+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level));
+        func(std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+Escape(name)+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level)+std::string(" Fee=")+std::to_string(fee));
 }
 
 void RessourcesManager::DeleteAccount(int PCId)
@@ -333,7 +333,8 @@ void RessourcesManager::UpdateMarket()
             {
                 order=std::string("BUY");
             }
-            market->addOrder(columnText[0],std::stoi(columnText[1]),order,columnText[4],std::stoi(columnText[3]),std::stoi(columnText[5]),std::stoi(columnText[6]),std::stoi(columnText[7]),std::stoi(columnText[8]));
+            int fee=static_cast<RessourcesManager*>(data)->GetFee(std::stoi(columnText[1]));
+            market->addOrder(columnText[0],std::stoi(columnText[1]),order,columnText[4],std::stoi(columnText[3]),std::stoi(columnText[5]),fee,std::stoi(columnText[6]),std::stoi(columnText[7]),std::stoi(columnText[8]));
         }
         return 0;
     };
@@ -373,9 +374,9 @@ void RessourcesManager::UpdateOrderSeed(int orderSeed)
     }
 }
 
-int RessourcesManager::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int stopPrice,bool aon,bool ioc)
+int RessourcesManager::addOrder(int PCId,std::string side,std::string symbol,int quantity,int price,int fee,int stopPrice,bool aon,bool ioc)
 {
-    return m_market->addOrder(PCId,side,symbol,quantity,price,stopPrice,aon,ioc);
+    return m_market->addOrder(PCId,side,symbol,quantity,price,fee,stopPrice,aon,ioc);
 }
 
 bool RessourcesManager::OrderExists(std::string orderID)
@@ -452,16 +453,20 @@ void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderent
     }
     auto funcBuy=m_client->GetMessager(orderBuy->PCId());
     auto funcSell=m_client->GetMessager(orderSell->PCId());
-    funcBuy(std::string("Buy Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderBuy->symbol()+std::string(" for ")+std::to_string(fill_cost));
-    funcSell(std::string("Sell Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderSell->symbol()+std::string(" for ")+std::to_string(fill_cost));
+    int BuyFee=GetFee(orderBuy->PCId());
+    int SellFee=GetFee(orderSell->PCId());;
+    funcBuy(std::string("Buy Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderBuy->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((1+BuyFee*0.01)*fill_cost)));
+    funcSell(std::string("Sell Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderSell->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((1+SellFee*0.01)*fill_cost)));
     AddFilled(orderBuy->PCId(),orderBuy->symbol(),true,fill_qty,fill_cost,funcBuy);
     AddFilled(orderSell->PCId(),orderSell->symbol(),false,fill_qty,fill_cost,funcSell);
     AddInventory(funcBuy,orderBuy->PCId(),orderBuy->symbol(),fill_qty);
     if(orderBuy->price()*fill_qty-fill_cost>0)
     {
-        AddInventory(funcBuy,orderBuy->PCId(),"gold",orderBuy->price()*fill_qty-fill_cost);
+        AddInventory(funcBuy,orderBuy->PCId(),"gold",(orderBuy->price()*fill_qty-fill_cost)*(1+BuyFee*0.01));
     }
-    AddInventory(funcSell,orderSell->PCId(),"gold",fill_cost);
+    AddInventory(funcSell,orderSell->PCId(),"gold",fill_cost*(1-SellFee*0.01));
+    std::function<void(std::string)> funcempty=[](std::string message){};
+    shopAdd((BuyFee+SellFee)*0.01*fill_cost,funcempty);
     char *errorMessage;
     std::string sql;
     if(order->quantityOnMarket()>0)
@@ -661,9 +666,10 @@ void RessourcesManager::Command_TradeBuy(int PCId,std::string GoodsName,int Quan
         if(HasGoods(GoodsName)&& GoodsName!=std::string("gold"))
         {
             int goldAvailable=GetInventory(PCId,"gold");
-            if(goldAvailable>=Price*Quantity)
+            int fee=GetFee(PCId);
+            if(goldAvailable>=Price*Quantity*(1.0+fee*0.01))
             {
-                int idOrder=addOrder(PCId,"BUY",GoodsName,Quantity,Price);
+                int idOrder=addOrder(PCId,"BUY",GoodsName,Quantity,Price,fee);
             }
             else if(GoodsName==std::string("gold"))
             {
@@ -699,9 +705,10 @@ void RessourcesManager::Command_TradeSell(int PCId,std::string GoodsName,int Qua
             if(HasGoods(GoodsName)&&GoodsName!=std::string("gold"))
             {
                 int goodsAvailable=GetInventory(PCId,GoodsName);
+                int fee=GetFee(PCId);
                 if(goodsAvailable>=Quantity)
                 {
-                    int idOrder=addOrder(PCId,"SELL",GoodsName,Quantity,Price);
+                    int idOrder=addOrder(PCId,"SELL",GoodsName,Quantity,Price,fee);
                 }
                 else
                 {
@@ -847,7 +854,7 @@ void RessourcesManager::Command_TradeHistory(int PCId,std::function<void(std::st
     }
 }
 
-void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,std::function<void(std::string)> func)
+void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,int fee,std::function<void(std::string)> func)
 {
     if(IsEmployee(PCId))
     {
@@ -858,7 +865,7 @@ void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int P
                 func("Need to be admin to add an employee.");
             }
         }
-        m_client->AddAccount(PlayerName,PCIdToAdd,EmployeeToAdd);
+        m_client->AddAccount(PlayerName,PCIdToAdd,fee,EmployeeToAdd);
     }
 }
 
@@ -933,7 +940,8 @@ void RessourcesManager::on_cancel(const orderentry::OrderPtr& order)
     {
     if(order->is_buy())
     {
-        AddInventory(func,PCId,"gold",order->price()*order->order_qty());
+        int fee=GetFee(PCId);
+        AddInventory(func,PCId,"gold",order->price()*order->order_qty()*(1+fee*0.01));
     }
     else
     {
@@ -979,7 +987,8 @@ void RessourcesManager::on_replace(const orderentry::OrderPtr& order,const int32
     }
     if(order->is_buy())
     {
-        int dgold=(order->quantityOnMarket()-size_delta)*order->price()-(order->quantityOnMarket())*new_price;
+        int fee=GetFee(PCId);
+        int dgold=(order->quantityOnMarket()-size_delta)*order->price()*(1+fee*0.01)-(order->quantityOnMarket())*new_price*(1+fee*0.01);
         if(dgold>0)
         {
             AddInventory(func,PCId,"gold",dgold);
@@ -1039,4 +1048,170 @@ void RessourcesManager::AddFilled(int PCId,std::string GoodsName,bool isBuy,int 
     {
         func(ex);
     }
+}
+
+void RessourcesManager::Command_Info(int PCId,std::function<void(std::string)> func)
+{
+    try
+    {
+        std::string message("fee=");
+        auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+        {
+            if(nbcolumn==1)
+            {
+                *static_cast<std::string*>(data)+=std::string(columnText[0])+std::string("%");
+            }
+            return 0;
+        };
+        char *errorMessage;
+        std::string sql=std::string("SELECT fee FROM account where PCId=")+std::to_string(PCId);
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&message,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+        func(message);
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+void RessourcesManager::Command_shopAdd(int PCId,int quantity,std::function<void(std::string)> func)
+{
+    try
+    {
+        if(IsAdmin(PCId))
+        {
+            shopAdd(quantity,func);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+void RessourcesManager::Command_shopRemove(int PCId,int quantity,std::function<void(std::string)> func)
+{
+    try
+    {
+        if(IsAdmin(PCId))
+        {
+            shopRemove(quantity,func);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+void RessourcesManager::Command_shopInfo(int PCId,std::function<void(std::string)> func)
+{
+    try
+    {
+        if(IsAdmin(PCId))
+        {
+            shopInfo(func);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+void RessourcesManager::shopAdd(int quantity,std::function<void(std::string)> func)
+{
+    int gold=shopGet(func)+quantity;
+    if(gold>=0)
+    {
+        char *errorMessage;
+        std::string sql=std::string("UPDATE shop_gold set shop_gold=")+std::to_string(gold);
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+    }
+    else
+    {
+        throw std::runtime_error("Gold becoming negatif");
+    }
+}
+void RessourcesManager::shopRemove(int quantity,std::function<void(std::string)> func)
+{
+    int gold=shopGet(func)-quantity;
+    if(gold>=0)
+    {
+        char *errorMessage;
+        std::string sql=std::string("UPDATE shop_gold set shop_gold=")+std::to_string(gold);
+        if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
+        {
+            throw std::runtime_error(errorMessage);
+        }
+    }
+    else
+    {
+        throw std::runtime_error("Gold becoming negatif");
+    }
+}
+void RessourcesManager::shopInfo(std::function<void(std::string)> func)
+{
+    int gold=shopGet(func);
+    func(std::string("Shop gold=")+std::to_string(gold)+std::string("gp"));
+}
+int RessourcesManager::shopGet(std::function<void(std::string)> func)
+{
+    int banswer;
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn>0)
+        {
+            int count=std::stoi(columnText[0]);
+            *static_cast<int*>(data)=count;
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT shop_gold FROM shop_gold");
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&banswer,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    return banswer;
+}
+
+int RessourcesManager::GetFee(int PCId)
+{
+    int fee=0;
+    auto callback=[](void* data,int nbcolumn,char ** columnText,char ** columnName)-> int
+    {
+        if(nbcolumn==1)
+        {
+            *static_cast<int*>(data)=std::stoi(columnText[0]);
+        }
+        return 0;
+    };
+    char *errorMessage;
+    std::string sql=std::string("SELECT fee FROM account where PCId=")+std::to_string(PCId);
+    if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),callback,&fee,&errorMessage)!=SQLITE_OK)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+    return fee;
 }
