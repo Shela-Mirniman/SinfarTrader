@@ -420,7 +420,8 @@ void RessourcesManager::on_accept(const orderentry::OrderPtr& order)
         }
         if(order->is_buy())
         {
-            RemoveInventory(func,order->PCId(),std::string("gold"),order->quantityOnMarket()*order->price());
+            int fee=order->fee();
+            RemoveInventory(func,order->PCId(),std::string("gold"),order->quantityOnMarket()*order->price()*(1+fee*0.01));
         }
         else
         {
@@ -455,8 +456,8 @@ void RessourcesManager::on_fill(const orderentry::OrderPtr& order,const orderent
     auto funcSell=m_client->GetMessager(orderSell->PCId());
     int BuyFee=GetFee(orderBuy->PCId());
     int SellFee=GetFee(orderSell->PCId());;
-    funcBuy(std::string("Buy Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderBuy->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((1+BuyFee*0.01)*fill_cost)));
-    funcSell(std::string("Sell Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderSell->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((1+SellFee*0.01)*fill_cost)));
+    funcBuy(std::string("Buy Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderBuy->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((BuyFee*0.01)*fill_cost)));
+    funcSell(std::string("Sell Order filled ")+std::to_string(fill_qty)+std::string(" ")+orderSell->symbol()+std::string(" for ")+std::to_string(fill_cost)+std::string(" total fee=")+std::to_string(int((SellFee*0.01)*fill_cost)));
     AddFilled(orderBuy->PCId(),orderBuy->symbol(),true,fill_qty,fill_cost,funcBuy);
     AddFilled(orderSell->PCId(),orderSell->symbol(),false,fill_qty,fill_cost,funcSell);
     AddInventory(funcBuy,orderBuy->PCId(),orderBuy->symbol(),fill_qty);
