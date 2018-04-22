@@ -2,9 +2,21 @@
 #include <string>
 #include <functional>
 
+inline int ToPrintableASCII(int value)
+{
+    if(value<32)
+    {
+	return 32;
+    }
+    else if(value>255)
+    {
+	return 255;
+    }
+    return value;
+}
 inline std::string ColorText(int red,int green,int blue,std::string text)
 {
-    return std::string("<c")+char(red)+char(green)+char(blue)+std::string(">")+text+std::string("</c>");                                                                     
+    return std::string("<c")+char(ToPrintableASCII(red))+char(ToPrintableASCII(green))+char(ToPrintableASCII(blue))+std::string(">")+text+std::string("</c>");                                                                     
 }
 
 static auto ColorRed=std::bind(ColorText,255,0,0,std::placeholders::_1);
