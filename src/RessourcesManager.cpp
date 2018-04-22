@@ -639,7 +639,7 @@ void RessourcesManager::Command_ListInventory(int PCId,int PCIdTo,std::function<
     {
         PCIdTo=PCId;
     }
-    else if(IsEmployee(PCId))
+    else if(!IsEmployee(PCId))
     {
         return;
     }
