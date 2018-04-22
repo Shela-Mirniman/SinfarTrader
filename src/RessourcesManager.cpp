@@ -239,7 +239,7 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
         else
         {
             char *errorMessage;
-            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+Escape(name)+std::string("',")       +std::to_string(permission_level)+std::to_string(fee)+std::string(")");
+            std::string sql=std::string("INSERT INTO account VALUES(")+std::to_string(PCId)+std::string(",")+std::to_string(PlayerId)+std::string(",'")+PlayerName+std::string("','")+Escape(name)+std::string("',")       +std::to_string(permission_level)+std::string(",")+std::to_string(fee)+std::string(")");
             if(sqlite3_exec(m_database->m_sqlite,sql.c_str(),nullptr,nullptr,&errorMessage)!=SQLITE_OK)
             {
                 throw std::runtime_error(errorMessage);
