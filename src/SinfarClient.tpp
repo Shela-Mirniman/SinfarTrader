@@ -1,5 +1,6 @@
 #include "SinfarClient.h"
-#include <boost/algorithm/string.hpp> 
+#include <boost/algorithm/string.hpp>
+#include "Color.h"
 
 inline SinfarClient::SinfarClient(std::shared_ptr<RessourcesManager> ressourceManager):m_ressourceManager(ressourceManager)
 {
@@ -127,18 +128,18 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
             }
             else if(command==std::string("h") || command==std::string("help"))
             {
-                std::string text(   "The following basic command are possible:\n"
-                                    "listgoods: List the goods that can be traded\n"
-                                    "help: Give this help message\n"
-                                    "info: Give details on your profile\n"
-                                    "list_i: List all item in your inventory\n"
-                                    "buy <quantity> <goodsname> <price>: Add a buy order\n"
-                                    "sell <quantity> <goodsname> <price>: Add a sell order\n"
-                                    "replace <order id> <delta quantity> <new price>: Replace an order\n"
-                                    "cancel <order id>: Cancel an order\n"
-                                    "history: Show the history of your trading\n"
-                                    "list: List all pending order\n"
-                                    "price <goodsname>: List the price of current goods on market\n");
+                std::string text=std::string("The following basic command are possible:\n")
+                                +ColorRed("listgoods")+std::string(": List the goods that can be traded\n")
+                                +ColorRed("help")+std::string(": Give this help message\n")
+                                +ColorRed("info")+std::string(": Give details on your profile\n")
+                                +ColorRed("list_i")+std::string(": List all item in your inventory\n")
+                                +ColorRed("buy <quantity> <goodsname> <price>")+std::string(": Add a buy order\n")
+                                +ColorRed("sell <quantity> <goodsname> <price>")+std::string(": Add a sell order\n")
+                                +ColorRed("replace <order id> <delta quantity> <new price>")+std::string(": Replace an order\n")
+                                +ColorRed("cancel <order id>")+std::string(": Cancel an order\n")
+                                +ColorRed("history")+std::string(": Show the history of your trading\n")
+                                +ColorRed("list")+std::string(": List all pending order\n")
+                                +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market\n");
                 SendMessage(PlayerName,text);
             }
             else if(command==std::string("info") || command==std::string("in"))
