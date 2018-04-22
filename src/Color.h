@@ -16,7 +16,7 @@ inline int ToPrintableASCII(int value)
 }
 inline std::string ColorText(int red,int green,int blue,std::string text)
 {
-    return std::string("<c")+char(ToPrintableASCII(red))+char(ToPrintableASCII(green))+char(ToPrintableASCII(blue))+std::string(">")+text+std::string("</c>");                                                                     
+    return std::string("<c")+char(ToPrintableASCII(red))+char(ToPrintableASCII(green))+char(ToPrintableASCII(blue))+std::string(">")+text+std::string("</c>")+char(ToPrintableASCII(red))+char(ToPrintableASCII(green))+char(ToPrintableASCII(blue));                                                                     
 }
 
 static auto ColorRed=std::bind(ColorText,231,32,32,std::placeholders::_1);
