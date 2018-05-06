@@ -316,7 +316,7 @@ void Market::ListPriceBook(std::function<void(std::string)> func,std::string Goo
 
 const OrderPtr Market::GetOrder(std::string orderId)
 {
-    return orders_[orderId];
+    return orders_.at(orderId);
 }
 
 

@@ -581,8 +581,10 @@ bool RessourcesManager::replaceOrder(int PCId,int orderID,int dquantity,int newp
     }
 }
 
-void RessourcesManager::Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func)
+void RessourcesManager::Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(Quantity>0&&PCIdTo>0&&IsEmployee(PCId))
     {
         if(HasGoods(GoodsName))
@@ -605,10 +607,21 @@ void RessourcesManager::Command_InventoryAdd(int PCId,int PCIdTo,std::string Goo
             func(std::string("GoodsName non existant: ")+GoodsName);
         }
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_InventoryRemove(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func)
+void RessourcesManager::Command_InventoryRemove(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(Quantity>0&&PCIdTo>0 && IsEmployee(PCId))
     {
         if(HasGoods(GoodsName))
@@ -631,10 +644,21 @@ void RessourcesManager::Command_InventoryRemove(int PCId,int PCIdTo,std::string 
             func(std::string("GoodsName non existant: ")+GoodsName);
         }
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_ListInventory(int PCId,int PCIdTo,std::function<void(std::string)> func)
+void RessourcesManager::Command_ListInventory(int PCId,int PCIdTo,std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(PCIdTo==-1)
     {
         PCIdTo=PCId;
@@ -658,9 +682,18 @@ void RessourcesManager::Command_ListInventory(int PCId,int PCIdTo,std::function<
             func(ex);
         }
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_TradeBuy(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func)
+void RessourcesManager::Command_TradeBuy(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func) noexcept
 {
     if(Quantity>0&&Price>0)
     {
@@ -699,7 +732,7 @@ void RessourcesManager::Command_TradeBuy(int PCId,std::string GoodsName,int Quan
     }
 }
 
-void RessourcesManager::Command_TradeSell(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func)
+void RessourcesManager::Command_TradeSell(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func) noexcept
 {
     if(Quantity>0&&Price>0)
     {
@@ -738,7 +771,7 @@ void RessourcesManager::Command_TradeSell(int PCId,std::string GoodsName,int Qua
     }
 }
 
-void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int Price,std::function<void(std::string)> func)
+void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int Price,std::function<void(std::string)> func) noexcept
 {
     if(Price>0)
     {
@@ -787,8 +820,10 @@ void RessourcesManager::Command_Replace(int PCId,int orderID,int dQuantity,int P
     }
 }
 
-void RessourcesManager::Command_Cancel(int PCId,int orderID, std::function<void(std::string)> func)
+void RessourcesManager::Command_Cancel(int PCId,int orderID, std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     auto order=m_market->GetOrder(std::to_string(orderID));
     if(order->PCId()==PCId)
     {
@@ -800,9 +835,18 @@ void RessourcesManager::Command_Cancel(int PCId,int orderID, std::function<void(
     {
         func("You cannot cancel an order which is not yours");
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func)
+void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func) noexcept
 {
     try
     {
@@ -821,7 +865,7 @@ void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::functi
     }
 }
 
-void RessourcesManager::Command_TradeHistory(int PCId,std::function<void(std::string)> func)
+void RessourcesManager::Command_TradeHistory(int PCId,std::function<void(std::string)> func) noexcept
 {
     try
     {
@@ -857,8 +901,10 @@ void RessourcesManager::Command_TradeHistory(int PCId,std::function<void(std::st
     }
 }
 
-void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,int fee,std::function<void(std::string)> func)
+void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int PCIdToAdd,bool EmployeeToAdd,int fee,std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(IsEmployee(PCId))
     {
         if(EmployeeToAdd)
@@ -870,10 +916,21 @@ void RessourcesManager::Command_AddAccount(std::string PlayerName,int PCId,int P
         }
         m_client->AddAccount(PlayerName,PCIdToAdd,fee,EmployeeToAdd);
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func)
+void RessourcesManager::Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(IsEmployee(PCId))
     {
         try
@@ -889,13 +946,33 @@ void RessourcesManager::Command_NewGoods(int PCId,std::string GoodsName,std::str
             func(ex);
         }
     }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
 }
 
-void RessourcesManager::Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func)
+void RessourcesManager::Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func) noexcept
 {
+    try
+    {
     if(IsAdmin(PCId))
     {
         DeleteAccount(PCIdToDelete,func);
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
     }
 }
 
@@ -1053,7 +1130,7 @@ void RessourcesManager::AddFilled(int PCId,std::string GoodsName,bool isBuy,int 
     }
 }
 
-void RessourcesManager::Command_Info(int PCId,std::function<void(std::string)> func)
+void RessourcesManager::Command_Info(int PCId,std::function<void(std::string)> func) noexcept
 {
     try
     {
@@ -1084,7 +1161,7 @@ void RessourcesManager::Command_Info(int PCId,std::function<void(std::string)> f
     }
 }
 
-void RessourcesManager::Command_shopAdd(int PCId,int quantity,std::function<void(std::string)> func)
+void RessourcesManager::Command_shopAdd(int PCId,int quantity,std::function<void(std::string)> func) noexcept
 {
     try
     {
@@ -1102,7 +1179,7 @@ void RessourcesManager::Command_shopAdd(int PCId,int quantity,std::function<void
         func(ex);
     }
 }
-void RessourcesManager::Command_shopRemove(int PCId,int quantity,std::function<void(std::string)> func)
+void RessourcesManager::Command_shopRemove(int PCId,int quantity,std::function<void(std::string)> func) noexcept
 {
     try
     {
@@ -1120,7 +1197,7 @@ void RessourcesManager::Command_shopRemove(int PCId,int quantity,std::function<v
         func(ex);
     }
 }
-void RessourcesManager::Command_shopInfo(int PCId,std::function<void(std::string)> func)
+void RessourcesManager::Command_shopInfo(int PCId,std::function<void(std::string)> func) noexcept
 {
     try
     {
