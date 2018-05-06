@@ -140,6 +140,15 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                                 +ColorRed("history")+std::string(": Show the history of your trading\n")
                                 +ColorRed("list")+std::string(": List all pending order\n")
                                 +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market\n");
+                                if(m_ressourceManager->IsEmployee(PCId))
+                                {
+                                    text+=ColorRed("new <shortname> <description>")+std::string(": Define a new goods.\n")
+                                    +ColorRed("inventory add <PCID> <goodsname> <quantity>")+std::string(": Add goods into inventory.\n")
+                                    +ColorRed("inventory remove <PCID> <goodsname> <quantity>")+std::string(": Remove goods from inventory.\n")
+                                    +ColorRed("list_i <PCID>")+std::string(": List all item in player inventory.\n");
+
+                                }
+                
                                 std::cout<<"message "<<text<<std::endl;
                 SendMessage(PlayerName,text);
             }
