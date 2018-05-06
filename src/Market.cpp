@@ -316,7 +316,14 @@ void Market::ListPriceBook(std::function<void(std::string)> func,std::string Goo
 
 const OrderPtr Market::GetOrder(std::string orderId)
 {
-    return orders_.at(orderId);
+    try
+    {
+        return orders_.at(orderId);
+    }
+    catch(std::out_of_range& ex)
+    {
+        throw std::out_of_range("OrderId doesn't exists");
+    }
 }
 
 
