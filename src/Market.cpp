@@ -137,6 +137,7 @@ void Market::on_replace(const OrderPtr& order,
     const int32_t& size_delta, 
     liquibook::book::Price new_price)
 {
+    m_ressourcesManager->on_replace(order,size_delta,new_price);
     order->onReplaced(size_delta, new_price);
     out() << "\tModify " ;
     if(size_delta != liquibook::book::SIZE_UNCHANGED)
@@ -148,7 +149,6 @@ void Market::on_replace(const OrderPtr& order,
         out() << " PRICE " << new_price;
     }
     out() <<*order<< std::endl;
-    m_ressourcesManager->on_replace(order,size_delta,new_price);
 }
 
 void 
