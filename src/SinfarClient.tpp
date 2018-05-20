@@ -218,6 +218,17 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                 stream>>Price;
                 m_ressourceManager->Command_TradeSell(PCId,GoodsName,Quantity,Price,func);
             }
+            else if(command==std::string("bid"))
+            {
+                int Quantity=0;
+                stream>>Quantity;
+                std::string GoodsName;
+                stream>>GoodsName;
+                boost::algorithm::to_lower(GoodsName);
+                int Price=0;
+                stream>>Price;
+                m_ressourceManager->Command_Bid(PCId,GoodsName,Quantity,Price,func);
+            }
             else if(command==std::string("replace") || command==std::string("r"))
             {
                 int orderID=0;

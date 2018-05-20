@@ -387,6 +387,22 @@ void Market::CancelOrder(int PCId,const std::string &symbol)
     });
 }
 
+const OrderPtr orderentry::Market::GetOrder(int PCId, const std::string& symbol)
+{
+    OrderPtr ret;
+    std::for_each(orders_.begin(),orders_.end(),[PCId,symbol,this,&ret](auto elem)
+    {
+        auto order=elem.second;
+        if(order->PCId()==PCId && (symbol=="" || order->symbol()==symbol))
+        {
+            ret=order;
+        }
+    });
+    return ret;
+}
+
+
+
 
 }  // namespace orderentry
 

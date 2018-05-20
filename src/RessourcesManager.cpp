@@ -1324,3 +1324,34 @@ int RessourcesManager::GetFee(int PCId)
     }
     return fee;
 }
+
+void RessourcesManager::Command_Bid(int PCId, std::string GoodsName, int Quantity, int Price,std::function<void(std::string)> func) noexcept
+{
+    if(Price>0)
+    {
+        try
+        {
+            if(HasGoods(GoodsName)&&GoodsName!="gold")
+            {
+                auto order=m_market->GetOrder(PCId,GoodsName);
+                if(order)
+                {
+                    Command_Replace(PCId,std::stoi(order->order_id()),Quantity-order->order_qty(),Price,func);
+                }
+                else
+                {
+                    Command_TradeBuy(PCId,GoodsName,Quantity,Price,func);
+                }
+            }
+        }
+        catch(const std::exception& ex)
+        {
+            func(ex.what());
+        }
+        catch (const std::string& ex)
+        {
+            func(ex);
+        }
+    }
+}
+

@@ -61,6 +61,7 @@ public:
     void Command_shopAdd(int PCId,int quantity,std::function<void(std::string)> func) noexcept;
     void Command_shopRemove(int PCId,int quantity,std::function<void(std::string)> func) noexcept;
     void Command_shopInfo(int PCId,std::function<void(std::string)> func) noexcept;
+    void Command_Bid(int PCId,std::string GoodsName,int Quantity,int Price,std::function<void(std::string)> func) noexcept;
     
     void shopAdd(int quantity,std::function<void(std::string)> func);
     void shopRemove(int quantity,std::function<void(std::string)> func);

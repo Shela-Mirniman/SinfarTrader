@@ -40,6 +40,7 @@ class Market
 public:
     void CancelOrder(int PCId,const std::string &symbol);
     const OrderPtr GetOrder(std::string orderId);
+    const OrderPtr GetOrder(int PCId,const std::string &symbol);
     void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
     void ListAllMarketPrices(std::function<void(std::string)> func);
     void setOrderSeed(uint32_t orderIdSeed);
