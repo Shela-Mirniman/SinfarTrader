@@ -1118,7 +1118,7 @@ void RessourcesManager::on_replace(const orderentry::OrderPtr& order,const int32
             AddInventory(func,PCId,order->symbol(),-size_delta);
         }
     }
-    func(std::string("Order replaced."));
+    func(std::string("Order ")+order->order_id()+std::string(" replaced."));
     }
     catch(const std::exception& ex)
     {
