@@ -40,6 +40,7 @@ public:
     void UpdateOrderSeed(int orderSeed);
     void DebugListMarket(std::function<void(std::string)> func);
     void ListOrderMarket(std::function<void(std::string)> func,int PCId);
+    void ListAllMarketPrices(std::function<void(std::string)> func);
     void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
     void OrderInfo(std::string orderID,int& price,int& quantity,std::string& goodsName,bool& isBuy);
     void Command_InventoryAdd(int PCId,int PCIdTo,std::string GoodsName,int Quantity,std::function<void(std::string)> func) noexcept;

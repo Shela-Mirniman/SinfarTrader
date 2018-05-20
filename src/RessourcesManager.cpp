@@ -556,6 +556,11 @@ void RessourcesManager::ListPriceBook(std::function<void(std::string)> func,std:
     m_market->ListPriceBook(func,GoodsName);
 }
 
+void RessourcesManager::ListAllMarketPrices(std::function<void(std::string)> func)
+{
+    m_market->ListAllMarketPrices(func);
+}
+
 void RessourcesManager::OrderInfo(std::string orderID,int& price,int& quantity,std::string& goodsName,bool& isBuy)
 {
     auto order=m_market->GetOrder(orderID);
@@ -850,9 +855,16 @@ void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::functi
 {
     try
     {
-        if(HasGoods(GoodsName))
+        if(GoodsName!="")
         {
-            ListPriceBook(func,GoodsName);
+            if(HasGoods(GoodsName))
+            {
+                ListPriceBook(func,GoodsName);
+            }
+        }
+        else
+        {
+            ListAllMarketPrices(func);
         }
     }
     catch(const std::exception& ex)

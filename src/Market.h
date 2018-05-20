@@ -40,6 +40,7 @@ class Market
 public:
     const OrderPtr GetOrder(std::string orderId);
     void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
+    void ListAllMarketPrices(std::function<void(std::string)> func);
     void setOrderSeed(uint32_t orderIdSeed);
     Market(std::shared_ptr<RessourcesManager> ressourcesManager,std::ostream * logFile = &std::cout);
     ~Market();

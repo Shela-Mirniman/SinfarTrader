@@ -314,6 +314,41 @@ void Market::ListPriceBook(std::function<void(std::string)> func,std::string Goo
     }
 }
 
+void Market::ListAllMarketPrices(std::function<void(std::string)> func)
+{
+    std::string message;
+    for_each(books_.begin(),books_.end(),[&message](auto elem)
+    {
+        message+=elem.first+std::string(":\n");
+        auto book =elem.second;
+        if(!book)
+        {
+            throw std::runtime_error(std::string("No book with name ")+elem.first);
+        }
+        else
+        {
+            auto depthInstance=static_cast<DepthOrderBook*>(book.get())->depth();
+            message+=std::string("Buy:\n");
+            for(auto depthI=depthInstance.last_bid_level();depthI>=depthInstance.bids();depthI--)
+            {
+                if(depthI->aggregate_qty()>0)
+                {
+                    message+=std::to_string(depthI->aggregate_qty())+std::string(" @ ")+std::to_string(depthI->price())+std::string("\n");
+                }
+            }
+            message+=std::string("Sell:\n");
+            std::for_each(depthInstance.asks(),depthInstance.last_ask_level(),[&message](auto depthI)
+            {
+                if(depthI.aggregate_qty()>0)
+                {
+                    message+=std::to_string(depthI.aggregate_qty())+std::string(" @ ")+std::to_string(depthI.price())+std::string("\n");
+                }
+            });
+        }
+    });
+    func(message);
+}
+
 const OrderPtr Market::GetOrder(std::string orderId)
 {
     try
