@@ -54,6 +54,7 @@ public:
     void Command_NewGoods(int PCId,std::string GoodsName,std::string GoodsDescription,std::function<void(std::string)> func) noexcept;
     void Command_DeleteAccount(int PCId,int PCIdToDelete, std::function<void(std::string)> func) noexcept;
     void Command_Cancel(int PCId,int orderID, std::function<void(std::string)> func) noexcept;
+    void Command_Cancel(int PCId,std::string GoodsName, std::function<void(std::string)> func) noexcept;
     void Command_Info(int PCId,std::function<void(std::string)> func) noexcept;
     void Command_TradeHistory(int PCId,std::function<void(std::string)> func) noexcept;
     

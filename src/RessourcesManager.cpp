@@ -851,6 +851,23 @@ void RessourcesManager::Command_Cancel(int PCId,int orderID, std::function<void(
     }
 }
 
+void RessourcesManager::Command_Cancel(int PCId,std::string GoodsName, std::function<void(std::string)> func) noexcept
+{
+    try
+    {
+        m_market->CancelOrder(PCId,GoodsName);
+    }
+    catch(const std::exception& ex)
+    {
+        func(ex.what());
+    }
+    catch (const std::string& ex)
+    {
+        func(ex);
+    }
+}
+
+
 void RessourcesManager::Command_TradeListPrice(std::string GoodsName,std::function<void(std::string)> func) noexcept
 {
     try

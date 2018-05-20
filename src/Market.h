@@ -38,6 +38,7 @@ class Market
     SymbolToBookMap books_;
     std::shared_ptr<RessourcesManager> m_ressourcesManager;
 public:
+    void CancelOrder(int PCId,const std::string &symbol);
     const OrderPtr GetOrder(std::string orderId);
     void ListPriceBook(std::function<void(std::string)> func,std::string GoodsName);
     void ListAllMarketPrices(std::function<void(std::string)> func);

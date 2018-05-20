@@ -136,7 +136,7 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                                 +ColorRed("buy <quantity> <goodsname> <price>")+std::string(": Add a buy order\n")
                                 +ColorRed("sell <quantity> <goodsname> <price>")+std::string(": Add a sell order\n")
                                 +ColorRed("replace <order id> <delta quantity> <new price>")+std::string(": Replace an order\n")
-                                +ColorRed("cancel <order id>")+std::string(": Cancel an order\n")
+                                +ColorRed("cancel_id <order id>")+std::string(": Cancel an order\n")
                                 +ColorRed("history")+std::string(": Show the history of your trading\n")
                                 +ColorRed("list")+std::string(": List all pending order\n")
                                 +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market\n");
@@ -228,11 +228,18 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                 stream>>Price;
                 m_ressourceManager->Command_Replace(PCId,orderID,dQuantity,Price,func);
             }
-            else if(command==std::string("cancel") || command==std::string("c"))
+            else if(command==std::string("cancel_id") || command==std::string("ci"))
             {
                 int orderID=0;
                 stream>>orderID;
                 m_ressourceManager->Command_Cancel(PCId,orderID,func);
+            }
+            else if(command==std::string("cancel") || command==std::string("c"))
+            {
+                std::string GoodsName;
+                stream>>GoodsName;
+                boost::algorithm::to_lower(GoodsName);
+                m_ressourceManager->Command_Cancel(PCId,GoodsName,func);
             }
             else if(command==std::string("history") || command==std::string("h"))
             {
