@@ -19,6 +19,10 @@ void handler( int )
 
 int main(int argc, char *argv[])
 {
+    try
+    {
+    while(stopFlag == 0)
+    {
     signal( SIGTERM, &handler );
     signal( SIGINT, &handler );
     signal( SIGABRT, &handler );
@@ -40,6 +44,20 @@ int main(int argc, char *argv[])
     ressource->UpdateMarket();
     while(stopFlag == 0)
     {
-        client->DoLoop();
+            client->DoLoop();
     };
+    }
+    }
+    catch(const std::exception& ex)
+    {
+        std::cout<<"exception catch in outer loop "<<ex.what()<<std::endl;
+    }
+    catch (const std::string& ex)
+    {
+        std::cout<<"exception catch in outer loop "<<ex<<std::endl;
+    }
+    catch (...)
+    {
+        std::cout<<"exception catch in outer loop"<<std::endl;
+    }
 }

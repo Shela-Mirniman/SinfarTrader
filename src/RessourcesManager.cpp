@@ -138,7 +138,7 @@ void RessourcesManager::ListGoods(std::function<void(std::string)> func)
         {
             if(nbcolumn==2)
             {
-                *static_cast<std::string*>(data)+=std::string(columnText[0])+std::string(" ")+std::string(columnText[1])+std::string("\n");
+                *static_cast<std::string*>(data)+=ColorRed(std::string(columnText[0]))+std::string(" ")+std::string(columnText[1])+std::string("\n");
             }
             return 0;
         };
@@ -196,7 +196,7 @@ void RessourcesManager::AddGoods(std::function<void(std::string)> func,std::stri
                 m_market->addBook(Goodsname);
             }
         }
-        func(std::string("Goods added sucessfuly: Goodsname=")+Goodsname+std::string(" GoodsDescription=")+Escape(GoodsDescription));
+        func(std::string("Goods added sucessfuly: ")+ColorRed("Goodsname=")+Goodsname+std::string(" ")+ColorRed("GoodsDescription=")+GoodsDescription);
 }
 
 bool RessourcesManager::HasAccount(int PCId)
@@ -247,7 +247,7 @@ void RessourcesManager::AddAccount(std::function<void(std::string)> func,int PCI
                 throw std::runtime_error(errorMessage);
             }
         }
-        func(std::string("Add sucessful: PCId=")+std::to_string(PCId)+std::string(" PlayerID=")+std::to_string(PlayerId)+std::string(" PCName=")+Escape(name)+std::string(" PlayerName=")+PlayerName+std::string(" Permission_Level=")+std::to_string(permission_level)+std::string(" Fee=")+std::to_string(fee));
+        func(std::string("Add sucessful: ")+ColorRed("PCId=")+std::to_string(PCId)+std::string(" ")+ColorRed("PlayerID=")+std::to_string(PlayerId)+std::string(" ")+ColorRed("PCName=")+name+std::string(" ")+ColorRed("PlayerName=")+PlayerName+std::string(" ")+ColorRed("Permission_Level=")+std::to_string(permission_level)+std::string(" ")+ColorRed("Fee=")+std::to_string(fee));
 }
 
 void RessourcesManager::DeleteAccount(int PCId)
@@ -513,7 +513,7 @@ void RessourcesManager::DebugListMarket(std::function<void(std::string)> func)
         {
             if(nbcolumn==9)
             {
-                *static_cast<std::string*>(data)+=std::string("OrderID=")+std::string(columnText[0])+std::string(" PCId=")+std::string(columnText[1])+std::string(" IsBuy=")+std::string(columnText[2])+std::string(" GoodsName=")+std::string(columnText[4])+std::string(" Quantity=")+std::string(columnText[3])+std::string(" Price=")+std::string(columnText[5])+std::string("\n");
+                *static_cast<std::string*>(data)+=ColorRed(std::string("OrderID="))+std::string(columnText[0])+std::string(" ")+ColorRed("PCId=")+std::string(columnText[1])+std::string(" ")+ColorRed("IsBuy=")+std::string(columnText[2])+std::string(" ")+ColorRed("GoodsName=")+std::string(columnText[4])+std::string(" ")+ColorRed("Quantity=")+std::string(columnText[3])+std::string(" ")+ColorRed("Price=")+std::string(columnText[5])+std::string("\n");
             }
             return 0;
         };
@@ -538,7 +538,7 @@ void RessourcesManager::ListOrderMarket(std::function<void(std::string)> func,in
                 {
                     action=" BUY ";
                 }
-                *static_cast<std::string*>(data)+=std::string("OrderID=")+std::string(columnText[0])+action+std::string(" GoodsName=")+std::string(columnText[4])+std::string(" Quantity=")+std::string(columnText[3])+std::string(" Price=")+std::string(columnText[5])+std::string("\n");
+                *static_cast<std::string*>(data)+=ColorRed(std::string("OrderID="))+std::string(columnText[0])+action+std::string(" ")+ColorRed("GoodsName=")+std::string(columnText[4])+std::string(" ")+ColorRed("Quantity=")+std::string(columnText[3])+std::string(" ")+ColorRed("Price=")+std::string(columnText[5])+std::string("\n");
             }
             return 0;
         };
