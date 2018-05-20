@@ -123,6 +123,7 @@ Market::on_cancel(const OrderPtr& order)
     order->onCancelled();
     out() << "\tCanceled: " << *order<< std::endl;
     m_ressourcesManager->on_cancel(order);
+    orders_.erase(order->order_id());
 }
 
 void Market::on_cancel_reject(const OrderPtr& order, const char* reason)
