@@ -1072,7 +1072,7 @@ void RessourcesManager::on_cancel(const orderentry::OrderPtr& order)
     {
         func(ex);
     }
-    func(std::string("Order ")+std::to_string(order->PCId())+std::string(" cancelled"));
+    func(std::string("Order ")+order->order_id()+std::string(" cancelled"));
 }
 
 void RessourcesManager::on_cancel_reject(const orderentry::OrderPtr& order, const char* reason)
