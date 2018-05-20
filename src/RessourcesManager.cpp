@@ -25,7 +25,7 @@ void RessourcesManager::ListInventory(std::function<void(std::string)> func,int 
     {
         if(nbcolumn==2)
         {
-            *static_cast<std::string*>(data)+=std::string(columnText[0])+std::string(" ")+std::string(columnText[1])+std::string("\n");
+            *static_cast<std::string*>(data)+=ColorRed(std::string(columnText[0]))+std::string(" ")+std::string(columnText[1])+std::string("\n");
         }
         return 0;
     };
