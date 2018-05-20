@@ -338,7 +338,7 @@ void Market::ListAllMarketPrices(std::function<void(std::string)> func)
             std::string trade_message;
             if(!buy_agregate.empty())
             {
-                trade_message=std::string("Buy:\n")+buy_agregate;
+                trade_message=ColorRed(std::string("Buy"))+std::string(":\n")+buy_agregate;
             }
             std::string sell_agregate;
             std::for_each(depthInstance.asks(),depthInstance.last_ask_level(),[&sell_agregate](auto depthI)
@@ -350,11 +350,11 @@ void Market::ListAllMarketPrices(std::function<void(std::string)> func)
             });
             if(!sell_agregate.empty())
             {
-                trade_message=std::string("Sell:\n")+sell_agregate;
+                trade_message=ColorRed(std::string("Sell"))+std::string(":\n")+sell_agregate;
             }
             if(!trade_message.empty())
             {
-                message+=elem.first+std::string(":\n")+trade_message;
+                message+=ColorRed(elem.first)+std::string(":\n")+trade_message;
             }
         }
     });
