@@ -319,7 +319,6 @@ void Market::ListAllMarketPrices(std::function<void(std::string)> func)
     std::string message;
     for_each(books_.begin(),books_.end(),[&message](auto elem)
     {
-        message+=elem.first+std::string(":\n");
         auto book =elem.second;
         if(!book)
         {
@@ -328,22 +327,35 @@ void Market::ListAllMarketPrices(std::function<void(std::string)> func)
         else
         {
             auto depthInstance=static_cast<DepthOrderBook*>(book.get())->depth();
-            message+=std::string("Buy:\n");
+            std::string buy_agregate;
             for(auto depthI=depthInstance.last_bid_level();depthI>=depthInstance.bids();depthI--)
             {
                 if(depthI->aggregate_qty()>0)
                 {
-                    message+=std::to_string(depthI->aggregate_qty())+std::string(" @ ")+std::to_string(depthI->price())+std::string("\n");
+                    buy_agregate+=std::to_string(depthI->aggregate_qty())+std::string(" @ ")+std::to_string(depthI->price())+std::string("\n");
                 }
             }
-            message+=std::string("Sell:\n");
-            std::for_each(depthInstance.asks(),depthInstance.last_ask_level(),[&message](auto depthI)
+            std::string trade_message;
+            if(!buy_agregate.empty())
+            {
+                trade_message=std::string("Buy:\n")+buy_agregate;
+            }
+            std::string sell_agregate;
+            std::for_each(depthInstance.asks(),depthInstance.last_ask_level(),[&sell_agregate](auto depthI)
             {
                 if(depthI.aggregate_qty()>0)
                 {
-                    message+=std::to_string(depthI.aggregate_qty())+std::string(" @ ")+std::to_string(depthI.price())+std::string("\n");
+                    sell_agregate+=std::to_string(depthI.aggregate_qty())+std::string(" @ ")+std::to_string(depthI.price())+std::string("\n");
                 }
             });
+            if(!sell_agregate.empty())
+            {
+                trade_message=std::string("Sell:\n")+sell_agregate;
+            }
+            if(!trade_message.empty())
+            {
+                message+=elem.first+std::string(":\n")+trade_message;
+            }
         }
     });
     func(message);
