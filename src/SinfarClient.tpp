@@ -135,11 +135,13 @@ inline void SinfarClient::ParseTell(int PCId,int PlayerId,std::string name,std::
                                 +ColorRed("list_i")+std::string(": List all item in your inventory\n")
                                 +ColorRed("buy <quantity> <goodsname> <price>")+std::string(": Add a buy order\n")
                                 +ColorRed("sell <quantity> <goodsname> <price>")+std::string(": Add a sell order\n")
+                                +ColorRed("bid <quantity> <goodsname> <price>")+std::string(": Add a bid order. This replace previous order for the same goods.\n")
                                 +ColorRed("replace <order id> <delta quantity> <new price>")+std::string(": Replace an order\n")
+                                +ColorRed("cancel <goodsname>")+std::string(": Cancel all order for goodsname. If missing, cancel all order.\n")
                                 +ColorRed("cancel_id <order id>")+std::string(": Cancel an order\n")
                                 +ColorRed("history")+std::string(": Show the history of your trading\n")
                                 +ColorRed("list")+std::string(": List all pending order\n")
-                                +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market\n");
+                                +ColorRed("price <goodsname>")+std::string(": List the price of current goods on market. If goodsname missing show all prices.\n");
                                 if(m_ressourceManager->IsEmployee(PCId))
                                 {
                                     text+=ColorRed("new <shortname> <description>")+std::string(": Define a new goods.\n")
